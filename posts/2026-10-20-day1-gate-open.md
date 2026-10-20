@@ -2,9 +2,9 @@
 
 > 成品稿。发布后把互动数补在这里：EN likes/RT：___ ｜ 中文阅读：___
 
-![签名图：左真K线 / 右蝇看到的48×27像素](../charts/retina-compare.png)
+![门卡：trailing +23.9% vs 瞬时 +250%](../charts/gate-card.png)
 
-发推时直接拖入这张文件：`charts/retina-compare.png`（1200×675）
+发推时拖入这张文件：`charts/gate-card.png`（1200×675）。第二张图可用 `charts/retina-compare.png`
 
 ---
 
