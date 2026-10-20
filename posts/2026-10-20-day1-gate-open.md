@@ -1,7 +1,10 @@
 # 2026-10-20 — Day 1: the gate just opened
 
-> 成品稿。「生成推文」演示产出。配图：charts/retina-compare.png（今日 21:41 版）
-> 发布后把互动数补在这里：EN likes/RT：___ ｜ 中文阅读：___
+> 成品稿。发布后把互动数补在这里：EN likes/RT：___ ｜ 中文阅读：___
+
+![签名图：左真K线 / 右蝇看到的48×27像素](../charts/retina-compare.png)
+
+发推时直接拖入这张文件：`charts/retina-compare.png`（1200×675）
 
 ---
 

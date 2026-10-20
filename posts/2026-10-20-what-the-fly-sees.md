@@ -1,7 +1,10 @@
 # 2026-10-20 — What the fly sees（签名图帖）
 
-> 成品稿。配图：charts/retina-compare.png（今晚 21:41 版，左真K线/右视网膜）。
-> 发布后补互动数：EN likes/RT：___ ｜ 中文阅读：___
+> 成品稿。发布后补互动数：EN likes/RT：___ ｜ 中文阅读：___
+
+![签名图：左真K线 / 右蝇看到的48×27像素](../charts/retina-compare.png)
+
+发推时直接拖入这张文件：`charts/retina-compare.png`（1200×675）
 
 ---
 
