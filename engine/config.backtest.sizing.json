@@ -1,0 +1,37 @@
+{
+ "_note": "Reproducible harness config: code defaults for risk/brain, no futures, all four README pairs. Used by `python -m flygate --config config.backtest.json protocol`. The live-tuned settings stay in config.json.",
+ "pairs": [
+  "BTC_USDT",
+  "ETH_USDT",
+  "SOL_USDT",
+  "PONS_USDT"
+ ],
+ "interval": "1m",
+ "quote_budget": 100.0,
+ "poll_s": 5,
+ "risk": {
+  "order_notional": 10,
+  "max_position_notional": 60,
+  "max_orders_per_day": 6,
+  "cooldown_s": 300,
+  "min_notional": 5.0,
+  "daily_loss_halt": 20.0,
+  "peak_drawdown_halt_pct": 20.0,
+  "taker_fee": 0.002,
+  "slippage": 0.0005,
+  "flash_candle_drop": 0.02,
+  "trailing_stop": 0.04,
+  "loom_exit": false,
+  "vol_target_sizing": true,
+  "target_daily_vol": 0.02,
+  "vol_lookback": 60,
+  "vol_scale_min": 0.25,
+  "vol_scale_max": 2.0
+ },
+ "brain": {
+  "mbon_inhibition": true
+ },
+ "futures": {
+  "enable": false
+ }
+}

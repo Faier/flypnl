@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>FlyGate 新币雷达 · 多链新上架代币扫描</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070a13;--card:#0f172a;--card-border:rgba(51,65,85,0.6);
+  --text:#f1f5f9;--dim:#94a3b8;
+  --green:#10b981;--green-glow:rgba(16,185,129,0.3);
+  --red:#f43f5e;--red-glow:rgba(244,63,94,0.3);
+  --gold:#f59e0b;--gold-glow:rgba(245,158,11,0.3);
+  --cyan:#06b6d4;--cyan-glow:rgba(6,182,212,0.3);
+  --purple:#a855f7;--purple-glow:rgba(168,85,247,0.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:radial-gradient(circle at 50% -10%, #1e1b4b 0%, #070a13 70%);
+  color:var(--text);font:14px/1.5 'Plus Jakarta Sans',-apple-system,"PingFang SC",sans-serif;
+  min-height:100vh;padding-bottom:60px;-webkit-font-smoothing:antialiased;
+}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1420px;margin:0 auto;padding:0 20px}
+
+/* ── Top Header ──────────────────────────── */
+header{
+  position:sticky;top:0;z-index:90;background:rgba(7,10,19,0.85);
+  backdrop-filter:blur(16px);border-bottom:1px solid rgba(168,85,247,0.3);
+  padding:12px 0;margin-bottom:20px;box-shadow:0 4px 20px rgba(0,0,0,0.5);
+}
+.hd{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .avatar-ring{
+  width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#a855f7,#06b6d4);
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  box-shadow:0 0 16px var(--purple-glow);
+}
+.brand-title{font-size:18px;font-weight:800;letter-spacing:.3px;color:#fff}
+.brand-sub{font-size:11px;color:var(--dim)}
+
+.kpis{display:flex;align-items:center;gap:24px}
+.kpi{display:flex;flex-direction:column}
+.kpi span{font-size:10.5px;color:var(--dim);text-transform:uppercase;font-weight:600;letter-spacing:.5px}
+.kpi b{font-size:16px;font-weight:800}
+.up{color:var(--green)!important;text-shadow:0 0 10px var(--green-glow)}
+.dn{color:var(--red)!important;text-shadow:0 0 10px var(--red-glow)}
+
+.actions{display:flex;align-items:center;gap:10px}
+button{
+  background:rgba(30,41,59,0.8);border:1px solid var(--card-border);color:var(--text);
+  padding:7px 15px;border-radius:9px;cursor:pointer;font-size:12.5px;font-weight:700;
+  display:inline-flex;align-items:center;gap:6px;transition:all .2s;
+}
+button:hover{filter:brightness(1.2);border-color:var(--purple);transform:translateY(-1px)}
+#conn{font-size:11.5px;color:var(--green);font-weight:700}
+
+/* ── Chain Badges & Security Pills ───────── */
+.chain-pill{padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.chain-SOL{background:rgba(168,85,247,0.18);color:#c084fc;border:1px solid rgba(168,85,247,0.45)}
+.chain-BASE{background:rgba(59,130,246,0.18);color:#60a5fa;border:1px solid rgba(59,130,246,0.45)}
+.chain-BSC{background:rgba(234,179,8,0.18);color:#facc15;border:1px solid rgba(234,179,8,0.45)}
+.chain-ARB{background:rgba(6,182,212,0.18);color:#22d3ee;border:1px solid rgba(6,182,212,0.45)}
+.chain-ETH{background:rgba(148,163,184,0.18);color:#e2e8f0;border:1px solid rgba(148,163,184,0.45)}
+.chain-ROBINHOOD{background:rgba(34,197,94,0.18);color:#4ade80;border:1px solid rgba(34,197,94,0.45)}
+
+.sec-badge{padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.sec-safe{background:rgba(16,185,129,0.18);color:var(--green);border:1px solid rgba(16,185,129,0.45)}
+.sec-danger{background:rgba(244,63,94,0.22);color:var(--red);border:1px solid var(--red)}
+.sec-unknown{background:rgba(148,163,184,0.15);color:var(--dim);border:1px solid rgba(148,163,184,0.4)}
+
+.badge-new-token{background:linear-gradient(135deg,rgba(245,158,11,0.22),rgba(234,88,12,0.22));color:#fbbf24;border:1px solid rgba(245,158,11,0.6);padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;display:inline-flex;align-items:center;gap:3px;box-shadow:0 0 10px rgba(245,158,11,0.25);white-space:nowrap}
+
+.nar-chip{padding:3px 9px;border-radius:7px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border:1px solid}
+.nar-hot{background:rgba(244,63,94,0.15);color:#fb7185;border-color:rgba(244,63,94,0.55)}
+.nar-warm{background:rgba(245,158,11,0.13);color:#fbbf24;border-color:rgba(245,158,11,0.5)}
+.nar-cool{background:rgba(148,163,184,0.12);color:#94a3b8;border-color:rgba(148,163,184,0.4)}
+.nar-cold{background:rgba(59,130,246,0.12);color:#93c5fd;border-color:rgba(59,130,246,0.45)}
+
+.pair-nav{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.p-btn{
+  background:rgba(15,23,42,0.8);border:1px solid var(--card-border);color:var(--dim);
+  padding:6px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.p-btn.active{background:var(--purple);border-color:var(--purple);color:#fff;box-shadow:0 0 14px var(--purple-glow)}
+
+.radar-subnav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.radar-tab-btn{
+  background:rgba(15,23,42,0.6);border:1px solid var(--card-border);color:var(--dim);
+  padding:7px 16px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;
+  transition:all .2s;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;
+}
+.radar-tab-btn.active{background:rgba(168,85,247,0.25);border-color:var(--purple);color:#fff;box-shadow:0 0 10px rgba(168,85,247,0.4)}
+
+.radar-search-input{
+  background:rgba(15,23,42,0.9);border:1px solid rgba(168,85,247,0.4);color:var(--text);
+  padding:8px 14px;border-radius:8px;font-size:12.5px;width:380px;outline:none;font-family:'JetBrains Mono',monospace;
+}
+.radar-search-input:focus{border-color:var(--purple);box-shadow:0 0 12px var(--purple-glow)}
+
+.card{
+  background:var(--card);border:1px solid var(--card-border);border-radius:18px;
+  overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);margin-bottom:20px;
+}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{color:var(--dim);text-align:left;padding:10px 12px;border-bottom:1px solid var(--card-border);font-size:11px;font-weight:700}
+td{padding:10px 12px;border-top:1px solid rgba(51,65,85,0.3)}
+tr:hover{background:rgba(30,41,59,0.3)}
+
+.pulse{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.3)}}
+</style>
+</head>
+<body>
+
+<header><div class="wrap hd">
+  <div class="brand">
+    <div class="avatar-ring">🐣</div>
+    <div>
+      <div class="brand-title">FlyGate 新币雷达</div>
+      <div class="brand-sub">多链新上架代币扫描（上线 ≤6h）· GoPlus 防貔貅审计 · 推荐效果实测</div>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi">
+      <span>扫描覆盖主网</span>
+      <b class="mono" style="color:var(--purple)">5 大链</b>
+    </div>
+    <div class="kpi">
+      <span>新币命中</span>
+      <b id="kpiNewTokens" class="mono" style="color:var(--gold)">0</b>
+    </div>
+    <div class="kpi">
+      <span>1h 实测胜率</span>
+      <b id="kpiWin1h" class="mono" style="color:#fff">积累中</b>
+    </div>
+    <div class="kpi">
+      <span>24h 实测胜率</span>
+      <b id="kpiWin24h" class="mono" style="color:#fff">积累中</b>
+    </div>
+  </div>
+
+  <div class="actions">
+    <a href="/" style="text-decoration:none">
+      <button style="background:rgba(6,182,212,0.2);border-color:var(--cyan);color:#fff">🪰 返回果蝇量化交易台 ↗</button>
+    </a>
+    <span id="conn">● 实时正常</span>
+  </div>
+</div></header>
+
+<div class="wrap">
+  <!-- 数据边界 -->
+  <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.35);border-radius:12px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:#fcd34d;line-height:1.6">
+    ℹ️ <b>只做新币，且设推送门槛</b>：每 15 秒扫描各链<b>可验证上线时间且 ≤6 小时</b>的新代币，只有
+    <b>通过 GoPlus 审计 + 底池 ≥$30k + 市值 ≥$50k + 未在跳水</b>的币才会推送上榜（依据是回测追踪里低门槛命中 1h 胜率仅 22%、中位 -36% 的实测）；
+    被拦截的按原因计数显示在"🚧 门槛拦截"。数据全部来自 DexScreener / GoPlus 公开接口；不追踪钱包链上成交（无此数据源），无跟单信号；
+    徽章是启发式风险提示，<b>是否值得跟要看"回测追踪"里的实测胜率，不构成投资建议</b>。
+  </div>
+
+  <!-- 顶部主控: 公链导航 + 搜索透视 -->
+  <div class="card" style="padding:18px 20px;border-color:rgba(168,85,247,0.35);box-shadow:0 8px 30px rgba(0,0,0,0.35)">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:12.5px;font-weight:700;color:var(--dim)">选择公链:</span>
+        <div class="pair-nav" style="margin-bottom:0">
+          <button class="radar-chain-btn p-btn active" data-chain="ALL" onclick="selectRadarChain('ALL')">全部公链 (ALL)</button>
+          <button class="radar-chain-btn p-btn" data-chain="SOL" onclick="selectRadarChain('SOL')">🟣 Solana (SOL)</button>
+          <button class="radar-chain-btn p-btn" data-chain="BASE" onclick="selectRadarChain('BASE')">🔵 Base</button>
+          <button class="radar-chain-btn p-btn" data-chain="BSC" onclick="selectRadarChain('BSC')">🟡 BSC (BNB)</button>
+          <button class="radar-chain-btn p-btn" data-chain="ARB" onclick="selectRadarChain('ARB')">🔷 Arbitrum</button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <input type="text" id="radarQueryInput" class="radar-search-input" placeholder="代币合约 / DexScreener 链接 / Solana 钱包地址（透视聪明钱真实持仓）" onkeydown="if(event.key==='Enter') executeRadarQuery()">
+        <button onclick="executeRadarQuery()" style="background:rgba(168,85,247,0.25);border-color:var(--purple);color:#fff">🔍 深度透视</button>
+      </div>
+    </div>
+
+    <!-- 查询透视结果卡片 -->
+    <div id="radarQueryResultCard" style="display:none;margin-top:16px;background:rgba(15,23,42,0.9);border:1px solid var(--purple);border-radius:12px;padding:16px;box-shadow:0 4px 20px rgba(168,85,247,0.25)">
+    </div>
+  </div>
+
+  <!-- 主内容卡 -->
+  <div class="card" style="padding:18px 20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid rgba(51,65,85,0.4);padding-bottom:10px;flex-wrap:wrap;gap:10px">
+      <div class="radar-subnav">
+        <button id="viewTabNewTokens" class="radar-tab-btn active" onclick="switchRadarView('new_tokens')">🐣 新币扫描榜 (<span id="newTokensCountNum">0</span>)</button>
+        <button id="viewTabNarrative" class="radar-tab-btn" onclick="switchRadarView('narrative')">🎭 叙事热度 (<span id="narrativeCountNum">0</span>)</button>
+        <button id="viewTabWatchlist" class="radar-tab-btn" onclick="switchRadarView('watchlist')">📌 自选盯盘 (<span id="watchCountNum">0</span>)</button>
+        <button id="viewTabPicks" class="radar-tab-btn" onclick="switchRadarView('picks')">📈 回测追踪 (<span id="picksCountNum">0</span>)</button>
+        <button id="viewTabXWatch" class="radar-tab-btn" onclick="switchRadarView('x_watch')">📣 X 监控 (<span id="xWatchCountNum">0</span>)</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <label style="font-size:12px;color:var(--dim);display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;background:rgba(244,63,94,0.1);padding:4px 10px;border-radius:6px;border:1px solid rgba(244,63,94,0.3)">
+          <input type="checkbox" id="filterDumpTokens" onchange="renderCurrentView()" style="cursor:pointer">
+          <span style="color:#fca5a5;font-weight:700">🛡️ 隐藏破位跳水与审计高危</span>
+        </label>
+        <div style="font-size:11.5px;color:var(--dim);display:flex;align-items:center;gap:6px">
+          <span class="pulse" style="background:var(--green)"></span>
+          <span>DexScreener 行情 + GoPlus 合约审计</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 视图 1: 新币扫描榜 (主视图) -->
+    <div id="radarNewTokensContainer">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px">
+        <div style="background:rgba(15,23,42,0.8);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:12px 16px">
+          <div style="font-size:11px;color:var(--dim);font-weight:700">🐣 过门槛推送</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
+            <b id="ntStatTotal" class="mono" style="font-size:22px;color:#fbbf24">0</b>
+            <span id="ntStatTotalSub" style="font-size:11px;color:var(--dim)">审计✔ 池≥$30k 市值≥$50k</span>
+          </div>
+        </div>
+        <div style="background:rgba(15,23,42,0.8);border:1px solid rgba(148,163,184,0.3);border-radius:12px;padding:12px 16px">
+          <div style="font-size:11px;color:var(--dim);font-weight:700">🚧 门槛拦截</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
+            <b id="ntStatGate" class="mono" style="font-size:22px;color:#94a3b8">--</b>
+            <span style="font-size:11px;color:var(--dim)" id="ntStatGateDetail">纸池/低市值/跳水/审计未过</span>
+          </div>
+        </div>
+        <div style="background:rgba(15,23,42,0.8);border:1px solid rgba(6,182,212,0.3);border-radius:12px;padding:12px 16px">
+          <div style="font-size:11px;color:var(--dim);font-weight:700">⚡ 1小时内极早期</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
+            <b id="ntStatEarly" class="mono" style="font-size:22px;color:var(--cyan)">0</b>
+            <span style="font-size:11px;color:var(--dim)">刚上线的极早期窗口</span>
+          </div>
+        </div>
+        <div style="background:rgba(15,23,42,0.8);border:1px solid rgba(244,63,94,0.3);border-radius:12px;padding:12px 16px">
+          <div style="font-size:11px;color:var(--dim);font-weight:700">🔥 反复命中</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
+            <b id="ntStatHot" class="mono" style="font-size:22px;color:#f43f5e">0</b>
+            <span style="font-size:11px;color:var(--dim)">扫描命中 ≥3 次（热度反复验证）</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="narrativeChips" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+        <span style="font-size:11.5px;font-weight:800;color:var(--dim)">🎭 叙事热度（近24h实测）：</span>
+      </div>
+
+      <div id="ntFilterNotice" style="display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:8px 14px;margin-bottom:12px;font-size:12px;color:#fcd34d"></div>
+
+      <div style="overflow-x:auto;max-height:640px;overflow-y:auto;border-radius:10px;border:1px solid rgba(51,65,85,0.4)">
+        <table id="radarNewTokensTable">
+          <thead style="position:sticky;top:0;background:#0f172a;z-index:2">
+            <tr>
+              <th>代币标的 / 合约</th>
+              <th>公链</th>
+              <th>🐣 上线时长</th>
+              <th>现价</th>
+              <th>市值 / 底池 / 动量</th>
+              <th>🛡️ GoPlus 审计</th>
+              <th>📡 命中</th>
+              <th>🎭 叙事板块</th>
+              <th>💡 关注标签</th>
+              <th>查验外链</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 视图 2: 自选盯盘 -->
+    <div id="radarWatchlistContainer" style="display:none">
+      <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:10px;padding:10px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div style="font-size:12px;color:#93c5fd">
+          📌 <b>自选持仓盯盘</b>：持仓代币纳入 15 秒轮询，实时追踪价格、内盘迁移进度与 5 分钟急跌预警。用上方"深度透视"查任意代币后即可加入。
+        </div>
+        <button onclick="fetchRadarWatchlist()" style="padding:4px 10px;font-size:11px;background:rgba(59,130,246,0.2);color:#93c5fd;border-color:rgba(59,130,246,0.5)">🔄 立即刷新</button>
+      </div>
+      <div style="overflow-x:auto;max-height:600px;overflow-y:auto;border-radius:10px;border:1px solid rgba(51,65,85,0.4)">
+        <table id="radarWatchlistTable">
+          <thead style="position:sticky;top:0;background:#0f172a;z-index:2">
+            <tr>
+              <th>代币标的 / 合约</th>
+              <th>公链</th>
+              <th>当前现价 / 盈亏</th>
+              <th>市值 / 内盘进度</th>
+              <th>5M / 1H 动量</th>
+              <th>🛡️ 安全审计</th>
+              <th>🎯 操盘战术与止损防线</th>
+              <th>查验与操作</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 视图 3: 回测追踪 -->
+    <div id="radarPicksContainer" style="display:none">
+      <div style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.3);border-radius:10px;padding:10px 16px;margin-bottom:12px;font-size:12px;color:#67e8f9;line-height:1.6">
+        📈 <b>推荐回测追踪</b>：每个首次推出的新币按当时价格纸面记录，1 / 6 / 24 小时后回填<b>真实涨跌</b>，按徽章分组统计胜率。
+        这是"雷达到底准不准"的实测——前 24 小时数据不全属正常；n &lt; 30 时胜率是噪声，重点看趋势。
+        <b>统计结果不构成买卖信号</b>。
+      </div>
+
+      <div style="overflow-x:auto;max-height:340px;overflow-y:auto;border-radius:10px;border:1px solid rgba(51,65,85,0.4);margin-bottom:14px">
+        <table id="radarPicksGroupsTable">
+          <thead style="position:sticky;top:0;background:#0f172a;z-index:2">
+            <tr>
+              <th>徽章组</th><th>样本</th>
+              <th>1h 胜率 / 均值</th><th>6h 胜率 / 均值</th><th>24h 胜率 / 均值</th><th>最好 / 最差 (24h)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div style="overflow-x:auto;max-height:420px;overflow-y:auto;border-radius:10px;border:1px solid rgba(51,65,85,0.4)">
+        <table id="radarPicksTable">
+          <thead style="position:sticky;top:0;background:#0f172a;z-index:2">
+            <tr>
+              <th>推出时间</th><th>公链</th><th>代币</th><th>入选徽章</th><th>入选价</th>
+              <th>1h</th><th>6h</th><th>24h</th><th>状态</th><th>查验</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 视图 4: 叙事热度 -->
+    <div id="radarNarrativeContainer" style="display:none">
+      <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:10px 16px;margin-bottom:12px;font-size:12px;color:#d8b4fe;line-height:1.6">
+        🎭 <b>叙事热度榜</b>：每个题材板块按<b>我们自己纸面追踪的实测收益</b>（近24h回填的真实涨跌）分档，
+        🔥hot / 🌡️warm / ❔样本积累中 / 🌫️cool / ❄️cold。叙事分类是<b>名字关键词启发式</b>（蹭名即匹配、拼错即漏），
+        板块轮动时热度自动跟随实测变化，不构成投资建议。
+      </div>
+      <div id="narrativeCards"></div>
+    </div>
+
+    <!-- 视图 5: X 监控 -->
+    <div id="radarXWatchContainer" style="display:none">
+      <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:10px 16px;margin-bottom:12px;font-size:12px;color:#d8b4fe;line-height:1.6">
+        📣 <b>X 账号监控</b>：ZCode 定时任务每 30 分钟抓一次监控账号的<b>公开主页</b>（未登录视角，看不到私信与仅关注可见内容），
+        新帖与资料变动写入本地状态文件，这里只读展示。<b>推文是外部观点，不构成投资建议</b>，公告类关键词仅作提示。
+      </div>
+      <div id="xWatchCards"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+let TOKEN = null;
+let radarChain = 'ALL';
+let radarView = 'new_tokens';
+let radarNewTokens = [];
+let radarGate = null;
+let radarNarratives = [];
+let radarWatchlist = [];
+let radarPicksData = null;
+let radarXWatch = [];
+
+const $ = id => document.getElementById(id);
+const fmt = (x, d=2) => x==null ? '--' : Number(x).toFixed(d);
+
+function fmtCompact(val){
+  if(!val || isNaN(val)) return '0';
+  val = Number(val);
+  if(val >= 1e9) return (val/1e9).toFixed(2) + 'B';
+  if(val >= 1e6) return (val/1e6).toFixed(2) + 'M';
+  if(val >= 1e3) return (val/1e3).toFixed(1) + 'k';
+  return val.toFixed(1);
+}
+
+async function loadToken(){
+  try {
+    const r = await fetch('/api/token', {cache: 'no-store'});
+    const j = await r.json();
+    if(j.token) TOKEN = j.token;
+  } catch(e){}
+}
+
+async function api(act, body){
+  if(!TOKEN) await loadToken();
+  const opts = {
+    method: 'post',
+    headers: {'X-Flygate-Token': TOKEN || '', 'Content-Type': 'application/json'}
+  };
+  if(body !== undefined) opts.body = JSON.stringify(body);
+  const res = await fetch('/api/' + act, opts);
+  try { return await res.json(); } catch(e) { return {}; }
+}
+
+function selectRadarChain(chain){
+  radarChain = chain;
+  document.querySelectorAll('.radar-chain-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.chain === chain);
+  });
+  fetchRadarNewTokens();
+  fetchRadarWatchlist();
+  fetchRadarPicks();
+}
+
+function switchRadarView(view){
+  radarView = view;
+  $('viewTabNewTokens').classList.toggle('active', view === 'new_tokens');
+  $('viewTabNarrative').classList.toggle('active', view === 'narrative');
+  $('viewTabWatchlist').classList.toggle('active', view === 'watchlist');
+  $('viewTabPicks').classList.toggle('active', view === 'picks');
+  $('viewTabXWatch').classList.toggle('active', view === 'x_watch');
+
+  $('radarNewTokensContainer').style.display = view === 'new_tokens' ? 'block' : 'none';
+  $('radarNarrativeContainer').style.display = view === 'narrative' ? 'block' : 'none';
+  $('radarWatchlistContainer').style.display = view === 'watchlist' ? 'block' : 'none';
+  $('radarPicksContainer').style.display = view === 'picks' ? 'block' : 'none';
+  $('radarXWatchContainer').style.display = view === 'x_watch' ? 'block' : 'none';
+
+  if(view === 'new_tokens') fetchRadarNewTokens();
+  else if(view === 'watchlist') fetchRadarWatchlist();
+  else if(view === 'picks') fetchRadarPicks();
+  else if(view === 'x_watch') fetchRadarXWatch();
+}
+
+function renderCurrentView(){
+  if(radarView === 'new_tokens') renderRadarNewTokensTable();
+  else if(radarView === 'narrative') renderNarrativeView();
+  else if(radarView === 'watchlist') renderRadarWatchlistTable();
+  else if(radarView === 'picks') renderRadarPicks();
+}
+
+/* ── 视图 1: 新币扫描榜 ──────────────────────────────── */
+async function fetchRadarNewTokens(){
+  try {
+    const url = `/api/radar/new_tokens` + (radarChain !== 'ALL' ? `?chain=${radarChain}` : '');
+    const res = await fetch(url, {cache: 'no-store'});
+    if(res.ok){
+      const data = await res.json();
+      // {tokens, gate, narratives} since the narrative layer landed; tolerate
+      // older shapes (bare array / no narratives) across a rolling restart.
+      radarNewTokens = Array.isArray(data) ? data : (data.tokens || []);
+      radarGate = Array.isArray(data) ? null : (data.gate || null);
+      radarNarratives = Array.isArray(data) ? [] : (data.narratives || []);
+      renderRadarNewTokensTable();
+      renderNarrativeView();
+    }
+  } catch(e){}
+}
+
+function renderRadarNewTokensTable(){
+  const tbl = $('radarNewTokensTable');
+  if(!tbl || !tbl.tBodies[0]) return;
+
+  // 榜单本身已是过门槛的推送（后端只发审计✔+池深+市值达标的币）；
+  // 🛡️ 复选框只额外折叠"推送后开始跳水/被标记高危"的行
+  const raw = radarNewTokens;
+  const filterDump = $('filterDumpTokens') ? $('filterDumpTokens').checked : false;
+  const isRisky = t => t.is_dumping ||
+      (t.security && t.security.checked === true && t.security.is_safe === false);
+  const hiddenCount = filterDump ? raw.filter(isRisky).length : 0;
+  const list = filterDump ? raw.filter(t => !isRisky(t)) : raw;
+
+  $('newTokensCountNum').textContent = raw.length;
+  const pushCount = raw.filter(t => t.push_tier !== 'watch').length;
+  const watchCount = raw.length - pushCount;
+  $('kpiNewTokens').textContent = pushCount;
+
+  let totalCount = raw.length;
+  let earlyCount = raw.filter(t => (t.token_age_min || 1e9) < 60).length;
+  let hotCount = raw.filter(t => (t.scan_hits || 1) >= 3).length;
+
+  if($('ntStatTotal')){
+    $('ntStatTotal').textContent = pushCount;
+    $('ntStatTotalSub') && ($('ntStatTotalSub').textContent =
+      `推送级${pushCount} · 🧪观察级${watchCount}`);
+  }
+  if($('ntStatEarly')) $('ntStatEarly').textContent = earlyCount;
+  if($('ntStatHot')) $('ntStatHot').textContent = hotCount;
+  if($('ntStatGate')){
+    const g = radarGate;
+    if(g && (g.blocked_total > 0 || (g.watch || 0) > 0)){
+      $('ntStatGate').textContent = g.blocked_total;
+      const b = g.blocked || {};
+      const parts = [];
+      if(b.liquidity) parts.push(`纸池 ${b.liquidity}`);
+      if(b.market_cap) parts.push(`低市值 ${b.market_cap}`);
+      if(b.dump) parts.push(`跳水 ${b.dump}`);
+      if(b.security) parts.push(`审计未过 ${b.security}`);
+      if(b.junk_name) parts.push(`垃圾名 ${b.junk_name}`);
+      if(g.watch) parts.push(`升观察级 ${g.watch}`);
+      $('ntStatGateDetail').textContent = parts.join(' · ');
+    } else {
+      $('ntStatGate').textContent = g ? '0' : '--';
+      $('ntStatGateDetail').textContent = '纸池/低市值/跳水/审计未过/垃圾名';
+    }
+  }
+
+  renderNarrativeChips();
+
+  // 过滤提示条：有命中被隐藏时明示，不再让人误以为雷达没工作
+  const notice = $('ntFilterNotice');
+  if(notice){
+    if(hiddenCount > 0){
+      notice.style.display = 'block';
+      notice.innerHTML = `🛡️ 已隐藏 <b>${hiddenCount}</b> 条破位跳水/审计高危记录（原始命中共 ${raw.length} 条）。取消勾选"🛡️"即可全部查看。`;
+    } else {
+      notice.style.display = 'none';
+    }
+  }
+
+  if(raw.length === 0){
+    tbl.tBodies[0].innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--dim);padding:35px">
+      暂无新币——推送级要过五道门（垃圾名→纸池→低市值→审计→跳水），🧪观察级也要过审计+不跳水+池≥$10k；安静时段这是正常的，被拦数量见"🚧 门槛拦截"卡。
+    </td></tr>`;
+    return;
+  }
+  if(list.length === 0){
+    tbl.tBodies[0].innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--dim);padding:35px">
+      当前 ${raw.length} 条命中全部为破位跳水/审计高危（已被隐藏）——这本身就是有效的排雷信息。取消勾选"🛡️"可查看明细。
+    </td></tr>`;
+    return;
+  }
+
+  let html = '';
+  list.forEach(t => {
+    const chainPill = `<span class="chain-pill chain-${t.chain}">${t.chain}</span>`;
+    const addr = t.address || '';
+    const shortAddr = addr ? (addr.slice(0, 4) + '...' + addr.slice(-4)) : '--';
+
+    const tokenHtml = `<div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <b style="color:var(--gold);font-size:13.5px">${t.symbol}</b>
+        <span style="font-size:11px;color:var(--dim)">(${t.name})</span>
+        <span style="font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,0.06);color:var(--dim)">${t.dex || 'DEX'}</span>
+      </div>
+      <div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">
+        <span>${shortAddr}</span>
+        <button onclick="navigator.clipboard.writeText('${addr}');alert('代币合约已复制')" style="padding:1px 5px;font-size:9.5px;margin-left:3px;background:transparent;border:1px solid rgba(148,163,184,0.3);color:var(--dim)">复制</button>
+      </div>
+    </div>`;
+
+    const ageMin = t.token_age_min || 0;
+    const isUltra = ageMin < 45;
+    const ageHtml = `<div>
+      <span class="badge-new-token" style="${isUltra ? 'background:linear-gradient(135deg,rgba(244,63,94,0.25),rgba(245,158,11,0.25));color:#fca5a5;border-color:rgba(244,63,94,0.6)' : ''}">
+        ${isUltra ? '🔥' : '🐣'} ${t.token_age_text || '刚上线'}
+      </span>
+      <div style="font-size:10.5px;color:var(--dim);margin-top:2px">${isUltra ? '极早期内盘/冲盘阶段' : '次新早期窗口'}</div>
+    </div>`;
+
+    const priceHtml = `<b class="mono" style="font-size:12px;color:#fff">$${fmt(t.price_usd, (t.price_usd||1)<0.01?8:4)}</b>`;
+
+    const mcapStr = fmtCompact(t.market_cap);
+    const liqStr = t.liquidity_usd ? fmtCompact(t.liquidity_usd) : '--';
+    const isPaperLiq = t.liquidity_usd > 0 && t.liquidity_usd < 30000;
+    const ch5 = t.change_m5 != null ? t.change_m5 : 0;
+    const ch1 = t.change_h1 != null ? t.change_h1 : 0;
+    const mcapHtml = `<div>
+      <b class="mono" style="font-size:12.5px;color:var(--cyan)">$${mcapStr}</b>
+      <div style="font-size:10.5px;color:${isPaperLiq ? '#f87171' : 'var(--dim)'};margin-top:2px">
+        池底: $${liqStr}${isPaperLiq ? ' ⚠️纸级' : ''}
+      </div>
+      <div style="margin-top:2px;display:flex;gap:8px">
+        <span class="mono ${ch5>=0?'up':'dn'}" style="font-size:10.5px;font-weight:700">5M ${ch5>=0?'+':''}${ch5.toFixed(1)}%</span>
+        <span class="mono ${ch1>=0?'up':'dn'}" style="font-size:10.5px;font-weight:700">1H ${ch1>=0?'+':''}${ch1.toFixed(1)}%</span>
+      </div>
+    </div>`;
+
+    const sec = t.security || {};
+    const secUnknown = sec.risk_level === 'UNKNOWN' || sec.checked === false;
+    const secSafe = !secUnknown && sec.is_safe !== false;
+    const secScore = sec.score != null ? sec.score : null;
+    const secBadge = secUnknown
+      ? `<span class="sec-badge sec-unknown">⏳ 未审计</span>`
+      : (secSafe
+        ? `<span class="sec-badge sec-safe">🛡️ 安全✔${secScore != null ? ` (${secScore}分)` : ''}</span>`
+        : `<span class="sec-badge sec-danger">⚠️ 高危${secScore != null ? ` (${secScore}分)` : ''}</span>`);
+    const secHtml = `<div>
+      ${secBadge}
+      <div style="font-size:10px;color:var(--dim);margin-top:2px">${secUnknown ? 'GoPlus 未能核验' : ((sec.details && sec.details.buy_tax_pct != null) ? `税 ${sec.details.buy_tax_pct}/${sec.details.sell_tax_pct}%` : '已核验')}</div>
+    </div>`;
+
+    const hits = t.scan_hits || 1;
+    const isHot = hits >= 3;
+    const hitsHtml = `<div>
+      ${isHot
+        ? `<span style="background:rgba(244,63,94,0.2);color:#f43f5e;border:1px solid rgba(244,63,94,0.5);padding:1px 6px;border-radius:4px;font-size:10.5px;font-weight:800">🔥 ${hits}次</span>`
+        : `<span style="background:rgba(16,185,129,0.2);color:var(--green);border:1px solid rgba(16,185,129,0.5);padding:1px 6px;border-radius:4px;font-size:10.5px;font-weight:800">📡 ${hits}次</span>`}
+      <div style="font-size:10px;color:var(--dim);margin-top:3px">首见 ${t.first_seen_time || '--'}</div>
+      <div style="font-size:10px;color:var(--dim)">最近 ${t.latest_seen_time || '--'}</div>
+    </div>`;
+
+    const nar = t.narrative || {};
+    const narMed = t.narrative_h1_median;
+    const narCls = {'hot':'nar-hot','warm':'nar-warm','cool':'nar-cool','cold':'nar-cold','warming':'nar-cool'}[t.narrative_tier] || 'nar-cool';
+    const narHtml = nar.label
+      ? `<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">
+          <span class="nar-chip ${narCls}">${nar.label} ${t.narrative_tier_emoji || ''}</span>
+          <span class="mono" style="font-size:10.5px;color:${narMed >= 0 ? 'var(--green)' : 'var(--red)'}">
+            ${narMed == null ? '板块样本积累中' : `板块h1中位 ${narMed>=0?'+':''}${narMed}%`}</span>
+        </div>`
+      : `<span style="color:var(--dim);font-size:11px">独立/未识别</span>`;
+
+    const badgeHtml = `<div>
+      <div style="font-weight:800;font-size:11.5px;color:#fff">${t.attention_badge || '👀 新上榜'}</div>
+      <div style="font-size:10px;color:var(--dim);margin-top:2px">来自行情/审计数据，非投资建议</div>
+    </div>`;
+
+    const linksHtml = `<div style="display:flex;align-items:center;gap:6px">
+      <a href="${t.chart_url}" target="_blank" style="padding:3px 7px;border-radius:6px;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.4);color:var(--cyan);text-decoration:none;font-size:11px;font-weight:700" title="在 DexScreener 查看实时K线">📊 K线</a>
+      <a href="${t.gmgn_url}" target="_blank" style="padding:3px 7px;border-radius:6px;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#c084fc;text-decoration:none;font-size:11px;font-weight:700" title="在 GMGN 查看链上筹码">🧠 筹码</a>
+    </div>`;
+
+    html += `<tr style="${t.push_tier === 'watch' ? 'background:rgba(245,158,11,0.05)' : ''}">
+      <td>${tokenHtml}</td>
+      <td>${chainPill}</td>
+      <td>${ageHtml}</td>
+      <td>${priceHtml}</td>
+      <td>${mcapHtml}</td>
+      <td>${secHtml}</td>
+      <td>${hitsHtml}</td>
+      <td>${narHtml}</td>
+      <td><div>${badgeHtml}</div></td>
+      <td>${linksHtml}</td>
+    </tr>`;
+  });
+  tbl.tBodies[0].innerHTML = html;
+}
+
+/* 叙事热度条：全部来自我们自己的纸面实测（回测追踪回填的真实涨跌）+ 在榜实时动量，
+   关键词词典是启发式，漏配/误配都可能，不构成板块权威指数。 */
+function renderNarrativeChips(){
+  const box = $('narrativeChips');
+  if(!box) return;
+  const ns = radarNarratives || [];
+  if(!ns.length){
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = 'flex';
+  if($('narrativeCountNum')) $('narrativeCountNum').textContent = ns.length;
+  box.innerHTML = '<span style="font-size:11.5px;font-weight:800;color:var(--dim)">🎭 叙事热度（近24h实测）：</span>' +
+    ns.slice(0, 8).map(n => {
+      const med = n.h1_median;
+      const medTxt = med == null ? `样本积累中` : `h1中位 ${med>=0?'+':''}${med}%`;
+      const cls = {'hot':'nar-hot','warm':'nar-warm','cool':'nar-cool','cold':'nar-cold','warming':'nar-cool'}[n.tier] || 'nar-cool';
+      const wr = n.h1_win_rate == null ? '--' : Math.round(n.h1_win_rate*100) + '%';
+      const title = `近24h追踪 ${n.tracked} 币 · h1样本 ${n.h1_n} · h1胜率 ${wr}` +
+        (n.h6_median != null ? ` · h6中位 ${n.h6_median>=0?'+':''}${n.h6_median}%` : '') +
+        ` · 当前在榜 ${n.live_coins} 币` + (n.live_h1_median != null ? ` · 在榜h1中位 ${n.live_h1_median>=0?'+':''}${n.live_h1_median}%` : '');
+      return `<span class="nar-chip ${cls}" title="${title}">${n.label} ${n.tier_emoji}
+        <b style="font-family:'JetBrains Mono',monospace">${medTxt}</b>
+        <span style="opacity:.65;font-weight:600">${n.tracked}币/在榜${n.live_coins}</span></span>`;
+    }).join('');
+}
+
+/* 叙事热度 tab：每板块一张卡，附在榜币与近24h纸面追踪明细 */
+function renderNarrativeView(){
+  const box = $('narrativeCards');
+  if(!box) return;
+  const ns = radarNarratives || [];
+  if(!ns.length){
+    box.innerHTML = `<div style="text-align:center;color:var(--dim);padding:35px">
+      叙事热度随推送积累——雷达推出新币后，这里会按题材板块自动分组并回填实测收益。
+    </div>`;
+    return;
+  }
+  const tierCls = {'hot':'nar-hot','warm':'nar-warm','cool':'nar-cool','cold':'nar-cold','warming':'nar-cool'};
+  const pct = v => v == null ? '--' : `<span class="mono ${(v>=0)?'up':'dn'}">${v>=0?'+':''}${v.toFixed(1)}%</span>`;
+  box.innerHTML = ns.map(n => {
+    const wr = n.h1_win_rate == null ? '--' : Math.round(n.h1_win_rate*100) + '%';
+    const liveRows = (n.live_tokens || []).map(t => `
+      <tr>
+        <td><b style="color:var(--gold)">${t.symbol}</b> <span style="color:var(--dim);font-size:10.5px">${(t.name||'').slice(0,22)}</span></td>
+        <td><span class="chain-pill chain-${t.chain}">${t.chain}</span></td>
+        <td>${pct(t.change_h1)}</td>
+        <td>${pct(t.change_h24)}</td>
+        <td class="mono" style="color:var(--cyan)">$${fmtCompact(t.market_cap)}</td>
+        <td style="white-space:nowrap">
+          ${t.chart_url ? `<a href="${t.chart_url}" target="_blank" title="DexScreener K线">📊</a>` : ''}
+          ${t.gmgn_url ? `<a href="${t.gmgn_url}" target="_blank" title="GMGN 链上筹码" style="margin-left:5px;color:#c084fc">🧠</a>` : ''}
+        </td>
+      </tr>`).join('');
+    const pickRows = (n.recent_picks || []).map(p => `
+      <tr>
+        <td><b style="color:var(--gold)">${p.symbol}</b> <span style="color:var(--dim);font-size:10.5px">${(p.name||'').slice(0,20)}</span></td>
+        <td><span class="chain-pill chain-${p.chain}">${p.chain}</span></td>
+        <td class="mono" style="color:var(--dim)">${p.time || '--'}</td>
+        <td>${pct(p.h1)}</td>
+        <td>${pct(p.h6)}</td>
+        <td style="white-space:nowrap">
+          ${p.chart_url ? `<a href="${p.chart_url}" target="_blank" title="DexScreener K线">📊</a>` : ''}
+          ${p.gmgn_url ? `<a href="${p.gmgn_url}" target="_blank" title="GMGN 链上筹码" style="margin-left:5px;color:#c084fc">🧠</a>` : ''}
+        </td>
+      </tr>`).join('');
+    return `
+    <div style="background:rgba(15,23,42,0.8);border:1px solid rgba(51,65,85,0.6);border-radius:14px;padding:14px 18px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span class="nar-chip ${tierCls[n.tier] || 'nar-cool'}" style="font-size:12.5px">${n.label} ${n.tier_emoji}</span>
+        <span style="font-size:11.5px;color:var(--dim)">追踪 <b class="mono" style="color:#fff">${n.tracked}</b> 币 ·
+          h1中位 <b class="mono" style="color:${(n.h1_median||0)>=0?'var(--green)':'var(--red)'}">${n.h1_median==null?'--':(n.h1_median>=0?'+':'')+n.h1_median+'%'}</b> ·
+          胜率 <b class="mono">${wr}</b> ·
+          h6中位 <b class="mono" style="color:${(n.h6_median||0)>=0?'var(--green)':'var(--red)'}">${n.h6_median==null?'--':(n.h6_median>=0?'+':'')+n.h6_median+'%'}</b> ·
+          在榜 <b class="mono" style="color:#fff">${n.live_coins}</b> 币</span>
+      </div>
+      ${liveRows ? `
+      <div style="margin-top:10px;overflow-x:auto;max-height:180px;overflow-y:auto;border-radius:8px;border:1px solid rgba(51,65,85,0.4)">
+        <table style="font-size:11.5px"><thead style="position:sticky;top:0;background:#0f172a"><tr>
+          <th>🟢 当前在榜币</th><th>公链</th><th>1H</th><th>24H</th><th>市值</th><th>K线</th>
+        </tr></thead><tbody>${liveRows}</tbody></table>
+      </div>` : ''}
+      ${pickRows ? `
+      <div style="margin-top:8px;overflow-x:auto;max-height:200px;overflow-y:auto;border-radius:8px;border:1px solid rgba(51,65,85,0.4)">
+        <table style="font-size:11.5px"><thead style="position:sticky;top:0;background:#0f172a"><tr>
+          <th>📜 近24h追踪</th><th>公链</th><th>推出时间</th><th>1h实测</th><th>6h实测</th><th>查验</th>
+        </tr></thead><tbody>${pickRows}</tbody></table>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ── 视图 5: X 监控（读 ZCode 定时任务落地的状态文件） ── */
+async function fetchRadarXWatch(){
+  try {
+    const res = await fetch('/api/radar/x_watch', {cache: 'no-store'});
+    if(res.ok){
+      radarXWatch = await res.json();
+      renderRadarXWatch();
+    }
+  } catch(e){}
+}
+
+/* 推文/简介是外部内容，进 innerHTML 前一律转义 */
+function escHtml(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+/* 公告类关键词：仅提示，不当信号 */
+const X_ANNOUNCE_RE = /(launch|live|airdrop|TGE|listing|上线|发币|发射|空投|上线|合作|partnership|预告|即将)/i;
+
+function fmtXTime(iso){
+  if(!iso) return '--';
+  const d = new Date(iso);
+  if(isNaN(d)) return escHtml(iso);
+  const p = n => String(n).padStart(2,'0');
+  return `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function renderRadarXWatch(){
+  const box = $('xWatchCards');
+  if(!box) return;
+  const accts = Array.isArray(radarXWatch) ? radarXWatch : [];
+  const totalPosts = accts.reduce((n,a) => n + ((a.history || []).length), 0);
+  $('xWatchCountNum').textContent = accts.length ? `${totalPosts}帖/${accts.length}号` : '0';
+  if(!accts.length){
+    box.innerHTML = `<div style="text-align:center;color:var(--dim);padding:35px">
+      还没有监控数据——ZCode 定时任务（每 30 分钟）跑完第一轮后，这里会显示监控账号的最新帖子和历史。
+    </div>`;
+    return;
+  }
+  box.innerHTML = accts.map(a => {
+    const prof = a.profile || {};
+    const posts = (a.history || []).map(p => {
+      const e = p.engagement || {};
+      const eng = [
+        e.replies != null ? `💬 ${e.replies}` : '',
+        e.reposts != null ? `🔁 ${e.reposts}` : '',
+        e.likes != null ? `❤️ ${e.likes}` : '',
+        e.views != null ? `👁 ${e.views}` : ''
+      ].filter(Boolean).join(' · ');
+      const hot = X_ANNOUNCE_RE.test(p.text || '');
+      return `
+      <div style="padding:10px 14px;border-bottom:1px solid rgba(51,65,85,0.35)">
+        <div style="font-size:13px;line-height:1.55;color:#e2e8f0">${hot ? '📣 ' : ''}${escHtml(p.text)}</div>
+        <div style="margin-top:4px;font-size:11px;color:var(--dim);display:flex;gap:14px;flex-wrap:wrap">
+          <span>🕐 首见 ${fmtXTime(p.first_seen)}</span>
+          ${eng ? `<span class="mono">${eng}</span>` : ''}
+          ${hot ? '<span style="color:#fbbf24;font-weight:700">公告类关键词</span>' : ''}
+        </div>
+      </div>`;
+    }).join('');
+    return `
+    <div style="background:rgba(15,23,42,0.8);border:1px solid rgba(51,65,85,0.6);border-radius:14px;padding:14px 18px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div style="font-size:13px;line-height:1.6">
+          <b style="color:#fff">${escHtml(prof.name || a.account)}</b>
+          <a href="${escHtml(a.profile_url || '#')}" target="_blank" style="color:var(--cyan);font-size:12px">@${escHtml(a.account)} ↗</a>
+          ${prof.bio ? `<span style="color:var(--dim)"> — ${escHtml(prof.bio)}</span>` : ''}
+        </div>
+        <div style="font-size:11.5px;color:var(--dim);text-align:right">
+          👁 粉丝 <b class="mono" style="color:#fff">${escHtml(prof.followers != null ? prof.followers : '--')}</b>
+          · 帖子 ${escHtml(prof.posts_total != null ? prof.posts_total : '--')}
+          · 建号 ${escHtml(prof.joined != null ? prof.joined : '--')}<br>
+          <span>🔄 上次抓取 ${fmtXTime(a.fetched_at)}（每30分钟）</span>
+        </div>
+      </div>
+      ${posts ? `<div style="margin-top:10px;border-radius:10px;border:1px solid rgba(51,65,85,0.4);overflow:hidden">${posts}</div>`
+              : '<div style="margin-top:10px;color:var(--dim);font-size:12px">暂无帖子记录</div>'}
+    </div>`;
+  }).join('');
+}
+
+/* ── 视图 2: 自选盯盘 ────────────────────────────────── */
+async function fetchRadarWatchlist(){
+  try {
+    const res = await fetch('/api/radar/watchlist', {cache: 'no-store'});
+    if(res.ok){
+      radarWatchlist = await res.json();
+      renderRadarWatchlistTable();
+    }
+  } catch(e){}
+}
+
+function renderRadarWatchlistTable(){
+  const tbl = $('radarWatchlistTable');
+  if(!tbl || !tbl.tBodies[0]) return;
+  if($('watchCountNum')) $('watchCountNum').textContent = radarWatchlist.length;
+
+  if(radarWatchlist.length === 0){
+    tbl.tBodies[0].innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--dim);padding:35px">
+      暂无自选盯盘代币。在上方搜索框输入代币合约或 DexScreener 链接，"深度透视"后一键加入盯盘。
+    </td></tr>`;
+    return;
+  }
+
+  let html = '';
+  radarWatchlist.forEach(item => {
+    const chainPill = `<span class="chain-pill chain-${item.chain}">${item.chain}</span>`;
+    const addr = item.token_address || '';
+    const shortAddr = addr ? (addr.slice(0, 4) + '...' + addr.slice(-4)) : '--';
+
+    const tokenHtml = `<div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <b style="color:var(--gold);font-size:13.5px">${item.symbol}</b>
+        <span style="font-size:11px;color:var(--dim)">(${item.name})</span>
+        <span style="font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,0.06);color:var(--dim)">${item.dex_id || 'DEX'}</span>
+      </div>
+      <div class="mono" style="font-size:11px;color:var(--dim);margin-top:2px">
+        <span>${shortAddr}</span>
+        <button onclick="navigator.clipboard.writeText('${addr}');alert('代币合约已复制')" style="padding:1px 5px;font-size:9.5px;margin-left:3px;background:transparent;border:1px solid rgba(148,163,184,0.3);color:var(--dim)">复制</button>
+      </div>
+    </div>`;
+
+    const pnl = item.pnl_pct || 0;
+    const pnlBadge = pnl >= 0
+      ? `<span class="mono up" style="font-size:11.5px;font-weight:700">+${pnl.toFixed(1)}%</span>`
+      : `<span class="mono dn" style="font-size:11.5px;font-weight:700">${pnl.toFixed(1)}% 🔻</span>`;
+
+    const priceHtml = `<div>
+      <b class="mono" style="font-size:13px;color:#fff">$${fmt(item.price_usd, (item.price_usd||1)<0.01?6:4)}</b>
+      <div style="font-size:10.5px;color:var(--dim);margin-top:2px">入场: $${fmt(item.entry_price, (item.entry_price||1)<0.01?6:4)} (${pnlBadge})</div>
+    </div>`;
+
+    const isPump = item.dex_id && item.dex_id.includes('Pump');
+    const curvePct = item.bonding_curve_pct || 0;
+    const mcapHtml = `<div>
+      <b class="mono" style="font-size:13px;color:var(--cyan)">$${fmtCompact(item.market_cap)}</b>
+      ${isPump ? `<div style="font-size:10.5px;color:#fbbf24;margin-top:2px">内盘进度: ${curvePct}% (打满 ~$69k 迁池)</div>` : `<div style="font-size:10.5px;color:var(--dim);margin-top:2px">底池: $${fmtCompact(item.liquidity_usd)}</div>`}
+    </div>`;
+
+    const ch5 = item.change_m5 || 0;
+    const ch1 = item.change_h1 || 0;
+    const momentumHtml = `<div>
+      <div class="mono ${ch5>=0?'up':'dn'}" style="font-size:11px;font-weight:700">5M: ${ch5>=0?'+':''}${ch5.toFixed(1)}%</div>
+      <div class="mono ${ch1>=0?'up':'dn'}" style="font-size:11px;font-weight:700;margin-top:2px">1H: ${ch1>=0?'+':''}${ch1.toFixed(1)}%</div>
+    </div>`;
+
+    const tac = item.tactical_assessment || {};
+    const notes = tac.notes || [];
+    const tacticalHtml = `<div style="font-size:11px;max-width:280px">
+      <div style="color:${ch5<-8?'#f87171':'var(--green)'};font-weight:700">
+        ${ch5<-8?'⚠️ 获利盘急跌回调':'✔ 盘面波动正常'} · 止损线 FDV $${fmtCompact(tac.support_fdv || (item.market_cap*0.75))}
+      </div>
+      <div style="font-size:10px;color:var(--dim);margin-top:2px">${notes[0] || '实时盯盘中，建议严格执行止损纪律'}</div>
+    </div>`;
+
+    const sec = item.security || {};
+    const secUnknown = sec.risk_level === 'UNKNOWN' || sec.checked === false;
+    const secSafe = !secUnknown && sec.is_safe !== false;
+    const secHtml = `<div>
+      <span class="sec-badge ${secUnknown?'sec-unknown':(secSafe?'sec-safe':'sec-danger')}">${secUnknown?'⏳ 未审计':(secSafe?'🛡️ 安全✔':'⚠️ 高危')}</span>
+    </div>`;
+
+    const linksHtml = `<div style="display:flex;align-items:center;gap:6px">
+      <a href="${item.chart_url}" target="_blank" style="padding:3px 7px;border-radius:6px;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.4);color:var(--cyan);text-decoration:none;font-size:11px;font-weight:700">📊 K线</a>
+      <a href="${item.gmgn_url}" target="_blank" style="padding:3px 7px;border-radius:6px;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#c084fc;text-decoration:none;font-size:11px;font-weight:700">🧠 筹码</a>
+      <button onclick="deleteFromWatchlist('${item.token_address}')" style="padding:3px 7px;border-radius:6px;background:rgba(244,63,94,0.15);border:1px solid rgba(244,63,94,0.4);color:var(--red);font-size:11px;font-weight:700">移除</button>
+    </div>`;
+
+    html += `<tr>
+      <td>${tokenHtml}</td>
+      <td>${chainPill}</td>
+      <td>${priceHtml}</td>
+      <td>${mcapHtml}</td>
+      <td>${momentumHtml}</td>
+      <td>${secHtml}</td>
+      <td>${tacticalHtml}</td>
+      <td>${linksHtml}</td>
+    </tr>`;
+  });
+  tbl.tBodies[0].innerHTML = html;
+}
+
+async function addDiscoveredTokenToWatch(chain, target, symbol, price){
+  try {
+    const j = await api('radar/watchlist', {chain, target, entry_price: price, note: `持仓盯盘 ${symbol}`});
+    if(j && j.ok){
+      alert(`已将 ${symbol} 加入自选盯盘`);
+      fetchRadarWatchlist();
+      switchRadarView('watchlist');
+    } else {
+      alert('加入自选失败: ' + (j && j.error ? j.error : '请重试'));
+    }
+  } catch(e){
+    alert('添加失败，请重试');
+  }
+}
+
+async function deleteFromWatchlist(addr){
+  if(!confirm('确定将该代币移出自选盯盘吗？')) return;
+  try {
+    const j = await api('radar/watchlist/delete', {address: addr});
+    if(j && j.ok){
+      fetchRadarWatchlist();
+    } else {
+      alert('移除失败: ' + (j && j.error ? j.error : '请重试'));
+    }
+  } catch(e){}
+}
+
+/* ── 视图 3: 回测追踪 ────────────────────────────────── */
+async function fetchRadarPicks(){
+  try {
+    const res = await fetch('/api/radar/picks', {cache: 'no-store'});
+    if(res.ok){
+      radarPicksData = await res.json();
+      renderRadarPicks();
+    }
+  } catch(e){}
+}
+
+function _pctCell(v){
+  if(v == null) return `<span class="mono" style="color:var(--dim)">…</span>`;
+  const cls = v > 0 ? 'up' : (v < 0 ? 'dn' : '');
+  return `<span class="mono ${cls}" style="font-weight:700">${v>0?'+':''}${v.toFixed(1)}%</span>`;
+}
+
+function _aggCell(a){
+  if(!a || !a.n) return `<span style="color:var(--dim)">待积累</span>`;
+  const wr = Math.round((a.win_rate || 0) * 100);
+  const wrColor = wr >= 55 ? 'var(--green)' : (wr <= 45 ? 'var(--red)' : 'var(--gold)');
+  const sr = a.survival_rate != null ? Math.round(a.survival_rate * 100) : null;
+  const srHtml = sr == null ? '' :
+    `<div class="mono" style="font-size:10.5px;margin-top:1px;color:${sr>=60?'var(--green)':(sr<=40?'var(--red)':'var(--gold)')}">存活 ${sr}% (>-20%)</div>`;
+  return `<div>
+    <b class="mono" style="color:${wrColor}">${wr}%</b><span style="color:var(--dim);font-size:11px"> 胜 (n=${a.n})</span>
+    <div class="mono" style="font-size:11px;margin-top:1px;color:${(a.avg_pct||0)>=0?'var(--green)':'var(--red)'}">均值 ${a.avg_pct>0?'+':''}${a.avg_pct.toFixed(2)}% · 中位 ${a.median_pct>0?'+':''}${a.median_pct.toFixed(2)}%</div>
+    ${srHtml}
+  </div>`;
+}
+
+function renderRadarPicks(){
+  if(!$('radarPicksTable')) return;
+  const d = radarPicksData;
+  if(!d) return;
+  $('picksCountNum').textContent = d.total || 0;
+
+  // 顶部 KPI: 整体实测胜率
+  const w1 = d.all && d.all.h1 && d.all.h1.n ? Math.round((d.all.h1.win_rate||0)*100) + '%' : null;
+  const w24 = d.all && d.all.h24 && d.all.h24.n ? Math.round((d.all.h24.win_rate||0)*100) + '%' : null;
+  $('kpiWin1h').textContent = w1 || '积累中';
+  $('kpiWin24h').textContent = w24 || '积累中';
+
+  // 分组统计表
+  const gtbl = $('radarPicksGroupsTable');
+  const groups = (d.groups || []).slice();
+  if(d.all && (d.all.h24 || d.all.h1 || d.all.h6)){
+    groups.unshift({status: 'ALL', badge: '📊 全部新币合计', n: d.total, by: d.all});
+  }
+  if(!groups.length){
+    gtbl.tBodies[0].innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--dim);padding:25px">尚无分组统计——推出首批新币后 1 小时开始出现 1h 数据。</td></tr>`;
+  } else {
+    gtbl.tBodies[0].innerHTML = groups.map(g => {
+      const h24 = (g.by && g.by.h24) || null;
+      const bw = (h24 && h24.n) ? `<span class="mono up">+${h24.best_pct.toFixed(1)}%</span> / <span class="mono dn">${h24.worst_pct.toFixed(1)}%</span>` : '<span style="color:var(--dim)">--</span>';
+      return `<tr>
+        <td><b style="font-size:11.5px">${g.badge || g.status}</b></td>
+        <td class="mono">${g.n}</td>
+        <td>${_aggCell(g.by && g.by.h1)}</td>
+        <td>${_aggCell(g.by && g.by.h6)}</td>
+        <td>${_aggCell(g.by && g.by.h24)}</td>
+        <td>${bw}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // 明细表
+  const tbl = $('radarPicksTable');
+  const picks = d.picks || [];
+  if(!picks.length){
+    tbl.tBodies[0].innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--dim);padding:35px">追踪已开启。雷达每推出一个新币即按当时价格开始记录，1 小时后出现第一批结果。</td></tr>`;
+    return;
+  }
+  tbl.tBodies[0].innerHTML = picks.map(p => {
+    const open = (p.horizons && (p.horizons.h24 == null)) || false;
+    const statusHtml = open
+      ? `<span style="font-size:11px;color:var(--gold);font-weight:700">⏳ 追踪中</span>`
+      : `<span style="font-size:11px;color:var(--dim);font-weight:700">✔ 已完结</span>`;
+    const chart = `https://dexscreener.com/${({SOL:'solana',BASE:'base',BSC:'bsc',ARB:'arbitrum',ETH:'ethereum'})[p.chain] || 'ethereum'}/${p.address}`;
+    return `<tr>
+      <td class="mono" style="font-size:11px;color:var(--dim)">${p.time || '--'}</td>
+      <td><span class="chain-pill chain-${p.chain}">${p.chain}</span></td>
+      <td><b style="color:var(--gold);font-size:12.5px">${p.symbol}</b></td>
+      <td style="font-size:11px;max-width:200px">${p.badge || p.status}</td>
+      <td class="mono" style="font-size:11px">$${fmt(p.entry_price_usd, (p.entry_price_usd||1)<0.01?8:4)}</td>
+      <td>${_pctCell(p.horizons && p.horizons.h1)}</td>
+      <td>${_pctCell(p.horizons && p.horizons.h6)}</td>
+      <td>${_pctCell(p.horizons && p.horizons.h24)}</td>
+      <td>${statusHtml}</td>
+      <td><a href="${chart}" target="_blank" style="padding:3px 7px;border-radius:6px;background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.4);color:var(--cyan);text-decoration:none;font-size:11px;font-weight:700">📊 K线</a></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── 深度透视 ────────────────────────────────────────── */
+async function executeRadarQuery(){
+  const input = $('radarQueryInput');
+  const q = (input ? input.value : '').trim();
+  if(!q) return;
+  const card = $('radarQueryResultCard');
+  card.style.display = 'block';
+  card.innerHTML = `<div style="text-align:center;color:var(--cyan);padding:14px;font-size:13px">🔍 正在透视 [${radarChain === 'ALL' ? '自动识别' : radarChain}]，提取行情与安全审计...</div>`;
+  try {
+    const res = await fetch(`/api/radar/query?chain=${radarChain}&q=${encodeURIComponent(q)}`);
+    const json = await res.json();
+    renderRadarQueryResult(json);
+  } catch(e){
+    card.innerHTML = `<div style="color:var(--red);padding:12px;font-size:12.5px">查询异常: 请检查网络连接或地址格式</div>`;
+  }
+}
+
+function renderRadarQueryResult(res){
+  const card = $('radarQueryResultCard');
+  if(!card) return;
+  if(!res || !res.data){
+    card.innerHTML = `<div style="color:var(--dim);padding:12px">未查询到对应标的信息。</div>`;
+    return;
+  }
+  const d = res.data;
+  if(res.type === 'token'){
+    const sec = d.security || {};
+    const secUnknown = sec.risk_level === 'UNKNOWN' || sec.checked === false;
+    const safe = !secUnknown && sec.is_safe !== false;
+    const score = sec.score != null ? sec.score : null;
+    const details = sec.details || {};
+    const secBadgeHtml = secUnknown
+      ? `<span class="sec-badge sec-unknown">⏳ 审计数据不可用</span>`
+      : (safe ? `<span class="sec-badge sec-safe">🛡️ ${score != null ? score + '分 ' : ''}安全无貔貅</span>` : `<span class="sec-badge sec-danger">⚠️ ${score != null ? score + '分 ' : ''}风险代币</span>`);
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="chain-pill chain-${d.chain}">${d.chain}</span>
+            <b style="font-size:16px;color:var(--gold)">${d.symbol}</b>
+            <span style="color:var(--dim);font-size:13px">(${d.name})</span>
+            ${secBadgeHtml}
+          </div>
+          <div class="mono" style="font-size:11px;color:var(--dim);margin-top:6px;word-break:break-all">
+            合约: ${d.token_address}
+            <button onclick="navigator.clipboard.writeText('${d.token_address}');alert('合约地址已复制')" style="padding:1px 6px;font-size:10px;margin-left:4px;background:transparent;border:1px solid rgba(148,163,184,0.3);color:var(--dim)">复制</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="addDiscoveredTokenToWatch('${d.chain}', '${d.token_address}', '${d.symbol}', ${d.price_usd})" style="padding:5px 12px;border-radius:8px;background:rgba(59,130,246,0.25);border:1px solid #3b82f6;color:#60a5fa;font-size:12px;font-weight:700">📌 加入自选盯盘</button>
+          <a href="${d.chart_url}" target="_blank" style="padding:5px 12px;border-radius:8px;background:rgba(6,182,212,0.2);border:1px solid var(--cyan);color:#fff;text-decoration:none;font-size:12px;font-weight:700">DexScreener 图表 ↗</a>
+          <button onclick="$('radarQueryResultCard').style.display='none'" style="background:transparent;border:1px solid var(--card-border);color:var(--dim);padding:5px 10px">关闭</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:14px;background:rgba(30,41,59,0.4);border-radius:10px;padding:10px">
+        <div><span style="font-size:10.5px;color:var(--dim)">当前价格</span><b class="mono" style="display:block;font-size:14px;color:#fff">$${fmt(d.price_usd, (d.price_usd||1)<0.01?6:4)}</b></div>
+        <div><span style="font-size:10.5px;color:var(--dim)">市值 / FDV</span><b class="mono" style="display:block;font-size:14px;color:var(--cyan)">$${fmtCompact(d.market_cap)}</b></div>
+        <div><span style="font-size:10.5px;color:var(--dim)">5M / 1H 动量</span><b class="mono ${d.change_m5>=0?'up':'dn'}" style="display:block;font-size:13px">${d.change_m5>=0?'+':''}${d.change_m5}% / ${d.change_h1>=0?'+':''}${d.change_h1}%</b></div>
+        <div><span style="font-size:10.5px;color:var(--dim)">盘口阶段</span><b class="mono" style="display:block;font-size:12.5px;color:#fbbf24">${d.is_pumpfun ? `Pump.fun 内盘 (${d.bonding_curve_pct || 0}%)` : (d.dex_id || 'DEX')}</b></div>
+        <div><span style="font-size:10.5px;color:var(--dim)">上线时长</span><b class="mono" style="display:block;font-size:12.5px;color:#fff">${d.token_age_text || '未知'}</b></div>
+      </div>
+
+      <div style="margin-top:12px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;font-size:11px">
+        <div style="background:rgba(15,23,42,0.6);padding:6px 10px;border-radius:6px;border:1px solid rgba(51,65,85,0.4)">
+          <span style="color:var(--dim)">貔貅买卖测试:</span> <b style="color:${details.is_honeypot==null?'var(--dim)':(details.is_honeypot?'var(--red)':'var(--green)')}">${details.is_honeypot==null?'未知':(details.is_honeypot?'⛔ 貔貅代币':'✔ 自由买卖')}</b>
+        </div>
+        <div style="background:rgba(15,23,42,0.6);padding:6px 10px;border-radius:6px;border:1px solid rgba(51,65,85,0.4)">
+          <span style="color:var(--dim)">买入/卖出税:</span> <b class="mono" style="color:#fff">${details.buy_tax_pct != null ? `${details.buy_tax_pct}% / ${details.sell_tax_pct}%` : '未知'}</b>
+        </div>
+        <div style="background:rgba(15,23,42,0.6);padding:6px 10px;border-radius:6px;border:1px solid rgba(51,65,85,0.4)">
+          <span style="color:var(--dim)">Mint增发权限:</span> <b style="color:${details.mint_revoked==null?'var(--dim)':(details.mint_revoked?'var(--green)':'var(--gold)')}">${details.mint_revoked==null?'未知':(details.mint_revoked?'✔ 已放弃':'⚠ 存在权限')}</b>
+        </div>
+        <div style="background:rgba(15,23,42,0.6);padding:6px 10px;border-radius:6px;border:1px solid rgba(51,65,85,0.4)">
+          <span style="color:var(--dim)">黑名单/冻结权:</span> <b style="color:${details.freeze_revoked==null?'var(--dim)':(details.freeze_revoked?'var(--green)':'var(--red)')}">${details.freeze_revoked==null?'未知':(details.freeze_revoked?'✔ 已放弃':'⛔ 存在冻结')}</b>
+        </div>
+        <div style="background:rgba(15,23,42,0.6);padding:6px 10px;border-radius:6px;border:1px solid rgba(51,65,85,0.4)">
+          <span style="color:var(--dim)">Top10持仓占比:</span> <b class="mono" style="color:${details.top10_percent==null?'var(--dim)':((details.top10_percent||0)>35?'var(--red)':'var(--green)')}">${details.top10_percent != null ? `${details.top10_percent}%` : '未知'}</b>
+        </div>
+      </div>
+    `;
+  } else {
+    const hs = d.holdings || [];
+    const holdingsHtml = (d.holdings_note)
+      ? `<div style="margin-top:10px;font-size:11.5px;color:var(--dim)">${d.holdings_note}</div>`
+      : (hs.length
+        ? `<div style="margin-top:12px;overflow-x:auto;border-radius:10px;border:1px solid rgba(51,65,85,0.4)">
+            <table style="font-size:11.5px">
+              <thead style="position:sticky;top:0;background:#0f172a"><tr>
+                <th>持有代币</th><th>市值</th><th>底池</th><th>24H</th><th>DEX</th><th>查验</th>
+              </tr></thead>
+              <tbody>${hs.map(h => `
+                <tr>
+                  <td><b style="color:var(--gold)">${h.symbol}</b> <span style="color:var(--dim);font-size:10.5px">${(h.name||'').slice(0,24)}</span></td>
+                  <td class="mono" style="color:var(--cyan)">$${fmtCompact(h.market_cap)}</td>
+                  <td class="mono">$${fmtCompact(h.liquidity_usd)}</td>
+                  <td class="mono ${(h.change_h24||0)>=0?'up':'dn'}"><b>${(h.change_h24||0)>=0?'+':''}${(h.change_h24||0).toFixed(1)}%</b></td>
+                  <td style="color:var(--dim)">${h.dex_id||'DEX'}</td>
+                  <td><a href="${h.chart_url}" target="_blank" style="color:var(--cyan)">📊</a></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--dim)">🗄️ 以上为该钱包<b>当前链上真实持仓快照</b>（公开 RPC + DexScreener 行情，底池 ≥$5k 才列出）。持仓 ≠ 买入：无法区分买入/转入空投，也不代表该钱包"聪明"——战绩数据仍无来源，不编造。</div>`
+        : `<div style="margin-top:10px;font-size:12px;color:var(--dim)">该钱包当前没有底池 ≥$5k 的 Solana 持仓代币（或 RPC 暂时不可用）。</div>`);
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div style="font-size:12.5px;color:var(--dim)">
+          📮 检测到钱包地址${d.alias ? `（${d.alias}）` : ''}。钱包<b>战绩/胜率无数据源</b>（任何数字都会是编造的），但可以透视它的<b>真实链上持仓</b>。
+          深挖去 GMGN / 区块浏览器：
+          <a href="${d.explorer_url || '#'}" target="_blank" style="color:var(--cyan)">浏览器 ↗</a> ·
+          <a href="${d.gmgn_url || '#'}" target="_blank" style="color:#c084fc">GMGN ↗</a>
+        </div>
+        <button onclick="$('radarQueryResultCard').style.display='none'" style="background:transparent;border:1px solid var(--card-border);color:var(--dim);padding:5px 10px">关闭</button>
+      </div>
+      ${holdingsHtml}
+    `;
+  }
+}
+
+loadToken().then(()=>{
+  fetchRadarNewTokens();
+  fetchRadarWatchlist();
+  fetchRadarPicks();
+  fetchRadarXWatch();
+  setInterval(()=>{
+    fetchRadarNewTokens();
+    if(radarView === 'picks') fetchRadarPicks();
+  }, 5000);
+  // 状态文件每 30 分钟才更新一次，60s 轮询足够
+  setInterval(fetchRadarXWatch, 60000);
+});
+</script>
+</body>
+</html>

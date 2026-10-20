@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>FlyGate OS · 果蝇大脑操盘台</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070a13;--card:#0f172a;--card-border:rgba(51,65,85,0.6);
+  --text:#f1f5f9;--dim:#94a3b8;
+  --green:#10b981;--green-glow:rgba(16,185,129,0.3);
+  --red:#f43f5e;--red-glow:rgba(244,63,94,0.3);
+  --gold:#f59e0b;--gold-glow:rgba(245,158,11,0.3);
+  --cyan:#06b6d4;--cyan-glow:rgba(6,182,212,0.3);
+  --purple:#a855f7;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:radial-gradient(circle at 50% -10%, #1e293b 0%, #070a13 70%);
+  color:var(--text);font:14px/1.5 'Plus Jakarta Sans',-apple-system,"PingFang SC",sans-serif;
+  min-height:100vh;padding-bottom:60px;-webkit-font-smoothing:antialiased;
+}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1380px;margin:0 auto;padding:0 20px}
+
+/* ── Top Clean Header ────────────────────── */
+header{
+  position:sticky;top:0;z-index:90;background:rgba(7,10,19,0.85);
+  backdrop-filter:blur(16px);border-bottom:1px solid var(--card-border);
+  padding:12px 0;margin-bottom:20px;
+}
+.hd{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .avatar-ring{
+  width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#06b6d4,#a855f7);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  box-shadow:0 0 16px var(--cyan-glow);
+}
+.brand-title{font-size:17px;font-weight:800;letter-spacing:.3px}
+.brand-sub{font-size:11px;color:var(--dim)}
+
+.kpis{display:flex;align-items:center;gap:24px}
+.kpi{display:flex;flex-direction:column}
+.kpi span{font-size:11px;color:var(--dim);text-transform:uppercase;font-weight:600;letter-spacing:.5px}
+.kpi b{font-size:18px;font-weight:800}
+.up{color:var(--green)!important;text-shadow:0 0 10px var(--green-glow)}
+.dn{color:var(--red)!important;text-shadow:0 0 10px var(--red-glow)}
+
+.actions{display:flex;align-items:center;gap:10px}
+button{
+  background:rgba(30,41,59,0.8);border:1px solid var(--card-border);color:var(--text);
+  padding:7px 15px;border-radius:9px;cursor:pointer;font-size:12.5px;font-weight:700;
+  display:inline-flex;align-items:center;gap:6px;transition:all .2s;
+}
+button:hover{filter:brightness(1.2);border-color:var(--cyan);transform:translateY(-1px)}
+button.kill{background:rgba(244,63,94,0.15);border-color:rgba(244,63,94,0.4);color:#fca5a5}
+button.kill:hover{background:rgba(244,63,94,0.3);box-shadow:0 0 15px var(--red-glow)}
+button.resume{background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.4);color:#6ee7b7}
+button.resume:hover{background:rgba(16,185,129,0.3);box-shadow:0 0 15px var(--green-glow)}
+#conn{font-size:11.5px;color:var(--dim);font-weight:600}
+
+/* ── Hero Fruit Fly Cockpit (重点1: 生动形象的果蝇主角) ── */
+.fly-hero{
+  background:linear-gradient(135deg,rgba(15,23,42,0.95) 0%,rgba(11,17,33,0.9) 100%);
+  border:1px solid var(--card-border);border-radius:20px;padding:24px;
+  display:grid;grid-template-columns:360px 1fr;gap:28px;align-items:center;
+  margin-bottom:24px;position:relative;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.4);
+}
+.fly-hero::before{
+  content:'';position:absolute;top:-50%;left:-20%;width:350px;height:350px;
+  background:radial-gradient(circle,rgba(6,182,212,0.15) 0%,transparent 70%);
+  pointer-events:none;
+}
+.fly-canvas-box{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;background:rgba(7,10,19,0.6);border-radius:16px;
+  border:1px solid rgba(51,65,85,0.4);padding:14px;
+}
+#flyCanvas{width:100%;max-width:280px;height:240px;display:block}
+.fly-status-tag{
+  margin-top:10px;padding:3px 12px;border-radius:20px;font-size:11.5px;font-weight:700;
+  display:inline-flex;align-items:center;gap:6px;background:rgba(6,182,212,0.15);color:var(--cyan);
+}
+.pulse{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.3)}}
+
+.fly-readout{display:flex;flex-direction:column;gap:16px}
+.fly-bubble{
+  background:rgba(30,41,59,0.6);border:1px solid rgba(148,163,184,0.2);
+  border-radius:14px;padding:14px 18px;position:relative;
+}
+.fly-bubble::before{
+  content:'';position:absolute;left:-8px;top:20px;border-width:8px 8px 8px 0;
+  border-style:solid;border-color:transparent rgba(30,41,59,0.6) transparent transparent;
+}
+.bubble-title{font-size:11px;color:var(--dim);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.bubble-text{font-size:15px;font-weight:700;color:#fff;line-height:1.6}
+
+.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.h-stat{background:rgba(15,23,42,0.7);border:1px solid var(--card-border);border-radius:12px;padding:10px 14px}
+.h-stat label{font-size:10.5px;color:var(--dim);font-weight:600;display:block;margin-bottom:2px}
+.h-stat b{font-size:16px;font-weight:800}
+
+/* ── Focused Trading Cards (重点2: 抓大放小，清晰决策) ── */
+.pair-nav{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.p-btn{
+  background:rgba(15,23,42,0.8);border:1px solid var(--card-border);color:var(--dim);
+  padding:6px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.p-btn.active{background:var(--cyan);border-color:var(--cyan);color:#070a13;box-shadow:0 0 12px var(--cyan-glow)}
+
+.card{
+  background:var(--card);border:1px solid var(--card-border);border-radius:18px;
+  overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);margin-bottom:24px;
+}
+.card-header{
+  display:flex;align-items:center;justify-content:space-between;padding:14px 20px;
+  border-bottom:1px solid var(--card-border);background:rgba(23,32,54,0.4);
+}
+.card-title{font-size:18px;font-weight:800;letter-spacing:.3px;display:flex;align-items:center;gap:10px}
+.cur-price{font-size:22px;font-weight:800}
+
+.core-grid{display:grid;grid-template-columns:1.8fr 1fr;gap:20px;padding:20px}
+.chart-box{background:#090d16;border-radius:12px;overflow:hidden;border:1px solid var(--card-border)}
+canvas.chart{display:block;width:100%;height:220px}
+
+.decision-box{display:flex;flex-direction:column;gap:14px}
+.decision-card{
+  background:rgba(30,41,59,0.5);border:1px solid var(--card-border);border-radius:14px;
+  padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
+}
+.decision-badge{padding:6px 16px;border-radius:10px;font-size:15px;font-weight:800;letter-spacing:.5px}
+.d-BUY{background:rgba(16,185,129,0.2);color:var(--green);border:1px solid var(--green)}
+.d-SELL{background:rgba(244,63,94,0.2);color:var(--red);border:1px solid var(--red)}
+.d-HOLD{background:rgba(148,163,184,0.15);color:var(--dim);border:1px solid rgba(148,163,184,0.3)}
+
+.pos-summary{
+  background:rgba(30,41,59,0.4);border:1px solid var(--card-border);border-radius:14px;
+  padding:14px 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+}
+.pos-cell label{font-size:11px;color:var(--dim);display:block;margin-bottom:2px}
+.pos-cell b{font-size:16px;font-weight:800}
+
+/* ── Advanced Toggle & Bottom Panels ─────── */
+.details-toggle{
+  display:flex;align-items:center;justify-content:center;padding:10px;
+  cursor:pointer;color:var(--dim);font-size:12px;font-weight:700;
+  border-top:1px solid var(--card-border);background:rgba(15,23,42,0.4);transition:color .2s;
+}
+.details-toggle:hover{color:var(--text)}
+.adv-panel{display:none;padding:16px 20px;border-top:1px solid var(--card-border);background:rgba(11,17,33,0.5)}
+
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.b-card{background:var(--card);border:1px solid var(--card-border);border-radius:18px;padding:18px}
+.b-card h3{font-size:13px;color:var(--dim);font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px}
+#eqc{width:100%;height:160px;background:#090d16;border-radius:10px;display:block}
+
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{color:var(--dim);text-align:left;padding:8px 10px;border-bottom:1px solid var(--card-border);font-size:11px}
+td{padding:8px 10px;border-top:1px solid rgba(51,65,85,0.3)}
+
+@media(max-width:960px){
+  .fly-hero{grid-template-columns:1fr}
+  .core-grid{grid-template-columns:1fr}
+  .bottom-grid{grid-template-columns:1fr}
+  .hero-stats{grid-template-columns:repeat(2,1fr)}
+  .learn{grid-template-columns:1fr}
+}
+
+/* 学习监控面板（学习蝇 vs 冻结影子蝇 + 边界饱和） */
+.learn{display:grid;grid-template-columns:1.2fr 1.2fr .8fr;gap:12px;margin-top:4px}
+.lbox canvas{width:100%;background:#0a0d13;border-radius:8px;display:block}
+.lbox h4{font-size:11px;color:var(--dim);font-weight:700;margin-bottom:6px;letter-spacing:.5px}
+.lg{font-size:11px;color:var(--dim);margin-top:5px}
+.lg.dim{opacity:.75}
+.da-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:12px;background:rgba(15,23,42,0.6);border:1px solid var(--card-border);border-radius:10px;padding:10px}
+.da-grid b{font-variant-numeric:tabular-nums;float:right}
+
+</style>
+</head>
+<body>
+
+<header><div class="wrap hd">
+  <div class="brand">
+    <div class="avatar-ring">🪰</div>
+    <div>
+      <div class="brand-title">FlyGate OS</div>
+      <div class="brand-sub">果蝇生物脑连接组交易系统</div>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi">
+      <span>策略总权益</span>
+      <b id="eq" class="mono up">-- USDT</b>
+    </div>
+    <div class="kpi" onclick="toggleDailyPanel(true)" style="cursor:pointer" title="点击展开每日收益战报与标的明细">
+      <span style="display:flex;align-items:center;gap:4px">今日净盈亏 <span style="font-size:10px;color:var(--cyan)">▼</span></span>
+      <b id="pnl" class="mono">-- USDT</b>
+    </div>
+    <div class="kpi" id="shGapBox">
+      <span>突触教学超额</span>
+      <b id="shGap" class="mono" style="color:var(--cyan)">--</b>
+    </div>
+  </div>
+
+  <div class="actions">
+    <a href="/radar" style="text-decoration:none"><button style="background:rgba(168,85,247,0.25);border-color:var(--purple);color:#fff">🎯 多链 Meme 聪明钱雷达 ↗</button></a>
+    <button class="kill" onclick="api('kill')">⛔ 紧急熔断</button>
+    <button class="resume" onclick="api('resume')">▶ 恢复</button>
+    <span id="conn">● 连接中…</span>
+  </div>
+</div></header>
+
+<div class="wrap">
+  <!-- 顶部折叠式: 每日盈亏战报与标的透视 (放在顶部，支持点击展开/收起) -->
+  <div id="dailyCardWrap" class="card" style="margin-bottom:18px;border-color:rgba(6,182,212,0.3);box-shadow:0 6px 24px rgba(0,0,0,0.3)">
+    <!-- 折叠开关栏 -->
+    <div onclick="toggleDailyPanel()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;background:rgba(23,32,54,0.6);transition:background .2s;user-select:none" id="dailyToggleHeader">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-size:18px">📅</span>
+        <span style="font-size:14px;font-weight:800;letter-spacing:0.3px;color:#fff">每日盈亏战报与标的透视</span>
+        <span id="dailySummaryBadge" style="font-size:11.5px;padding:3px 10px;border-radius:6px;background:rgba(244,63,94,0.15);color:var(--red);border:1px solid rgba(244,63,94,0.3);font-weight:700">今日: -1.84 U · 30 笔交易</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--cyan)">
+        <span id="dailyToggleArrow">▼ 点击展开每日明细与历史对比</span>
+      </div>
+    </div>
+    
+    <!-- 展开内容区 (默认折叠，点击展开) -->
+    <div id="dailyPanelContent" style="display:none;padding:16px 18px;border-top:1px solid var(--card-border);background:rgba(11,17,33,0.7)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:700;color:var(--dim)">选择日期:</span>
+          <div id="dailyDateTabs" class="pair-nav" style="margin-bottom:0"></div>
+          <select id="dailyDateSelect" onchange="selectDailyDate(this.value)" style="background:rgba(15,23,42,0.85);border:1px solid var(--card-border);color:var(--text);padding:6px 10px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;outline:none"></select>
+        </div>
+        <div>
+          <label style="font-size:11.5px;color:var(--dim);display:inline-flex;align-items:center;gap:5px;cursor:pointer;user-select:none">
+            <input type="checkbox" id="filterZeroTrades" onchange="renderDailyUI()" style="cursor:pointer" checked> 仅看有交易标的
+          </label>
+        </div>
+      </div>
+
+      <!-- 选中日期的宏观指标条 -->
+      <div id="dailyDayOverview" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;background:rgba(30,41,59,0.4);border:1px solid var(--card-border);border-radius:12px;padding:12px">
+      </div>
+
+      <!-- 选中日期的币种明细表格 -->
+      <div style="overflow-x:auto;max-height:360px;overflow-y:auto;border-radius:10px;border:1px solid rgba(51,65,85,0.4);margin-bottom:12px">
+        <table id="dailyPairsTable">
+          <thead style="position:sticky;top:0;background:#0f172a;z-index:2">
+            <tr>
+              <th>标的资产</th>
+              <th>买入操作</th>
+              <th>卖出操作</th>
+              <th>均价对比</th>
+              <th>当日净盈亏</th>
+              <th>核心决策与出场原因</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      
+      <div style="display:flex;justify-content:center">
+        <button onclick="toggleDailyPanel()" style="padding:4px 16px;font-size:11.5px;color:var(--dim);background:transparent;border:1px solid var(--card-border)">▲ 收起面板</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 标的选择导航条 (放在最显眼位置，让用户一眼明确当前在看什么币) -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+    <div style="font-size:12.5px;font-weight:700;color:var(--dim);display:flex;align-items:center;gap:6px">
+      <span>🎯 切换果蝇正在观测与操盘的币种:</span>
+    </div>
+    <div class="pair-nav" id="pairTabs" style="margin-bottom:0"></div>
+  </div>
+
+  <!-- 学习监控：教学是否改变结果（学习蝇 − 冻结影子蝇） -->
+  <div class="card" id="learnPanel" style="margin-bottom:18px;display:none">
+    <div style="font-size:13px;font-weight:800;letter-spacing:.3px;color:#fff;margin-bottom:10px">🧠 学习监控 —— 教学是否改变结果（学习蝇 − 冻结影子蝇）</div>
+    <div class="learn">
+      <div class="lbox">
+        <h4>双子赛跑：学习蝇 vs 影子蝇（从本轮起点的涨跌 %，谁在上谁赢）</h4>
+        <canvas id="gapc" height="120"></canvas>
+        <div class="lg">实时差距 <b id="gapNow" style="color:var(--text)">--</b>（学习蝇 − 影子蝇）· 判读需 ≥4 周</div>
+      </div>
+      <div class="lbox">
+        <h4>突触漂移（偏离解剖基线 % · 0 线 = 基线，影子蝇恒贴 0 不动）</h4>
+        <canvas id="wc" height="120"></canvas>
+        <div class="lg"><span style="color:#2bd4a4">wₐ 接近</span> · <span style="color:#b48bff">wᵥ 回避</span> · 每次平仓教学 ±10% 效能、遗忘 30:1 往回拉</div>
+      </div>
+      <div class="lbox">
+        <h4>多巴胺记分牌 / 课时</h4>
+        <div class="da-grid">
+          <div>今日 🍯 奖励<b id="daR">0</b></div>
+          <div>今日 ⚡ 惩罚<b id="daP">0</b></div>
+          <div>累计 🍯<b id="daRT">0</b></div>
+          <div>累计 ⚡<b id="daPT">0</b></div>
+          <div>今日课时<b id="trN">0</b></div>
+          <div>影子蝇权益<b id="shEq2">--</b></div>
+          <div>边界饱和<b id="satN">--</b></div>
+        </div>
+        <div class="lg dim">一节课 = 一次平仓教学（含强制平仓）· 记分牌持久化，重启不清零 · 饱和 = 活跃边被 0.1x–2x 生物界限钉住的比例，&gt;30% 表示界限（而非数据）在决定权重</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 策略权益曲线（现货+合约） -->
+  <div class="card" style="margin-bottom:18px">
+    <div style="font-size:13px;font-weight:800;letter-spacing:.3px;color:#fff;margin-bottom:10px">策略权益曲线（现货+合约）</div>
+    <canvas id="eqc" height="150" style="width:100%;background:#0a0d13;border-radius:8px;display:block"></canvas>
+  </div>
+
+  <!-- 重点1: 栩栩如生、形象生动的动态果蝇座舱 (Fly Cockpit) -->
+  <div class="fly-hero">
+    <div class="fly-canvas-box">
+      <!-- 动态生物果蝇 Canvas: 包含振动翅膀、发光复眼与脉冲神经回路 -->
+      <canvas id="flyCanvas" width="280" height="240"></canvas>
+      <div class="fly-status-tag" id="flyMood">
+        <span class="pulse"></span><span id="flyMoodTxt">神经放电监测中</span>
+      </div>
+    </div>
+
+    <div class="fly-readout">
+      <div class="fly-bubble" style="padding:16px 20px">
+        <div class="bubble-title" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(148,163,184,0.15);padding-bottom:8px;margin-bottom:10px">
+          <span style="display:flex;align-items:center;gap:6px">
+            <span style="color:var(--cyan)">●</span>
+            <b>真实信号决策审计 (Gate.io 实时计算)</b>
+          </span>
+          <span id="heroTargetPair" style="background:rgba(6,182,212,0.15);color:var(--cyan);border:1px solid rgba(6,182,212,0.4);padding:2px 10px;border-radius:6px;font-size:12px;font-weight:800;letter-spacing:0.5px">当前标的: BTC_USDT</span>
+        </div>
+        <div id="flyThought" style="font-size:12.5px;line-height:1.7;font-family:'JetBrains Mono',monospace">
+          <!-- 实时真实计算的条件检验矩阵 -->
+        </div>
+      </div>
+
+      <div class="hero-stats">
+        <div class="h-stat">
+          <label>当前大脑姿态</label>
+          <b id="heroTilt" style="color:var(--cyan)">水平平衡 0.0°</b>
+        </div>
+        <div class="h-stat">
+          <label>Fly-LSH 历史形态</label>
+          <b id="heroRegime" style="color:#fff">蓄势整理</b>
+        </div>
+        <div class="h-stat">
+          <label>形态相似匹配率</label>
+          <b id="heroSim" style="color:var(--green)">--%</b>
+        </div>
+        <div class="h-stat">
+          <label>今日多巴胺奖励</label>
+          <b id="heroDopamine" style="color:var(--gold)">0 滴糖水 🍯</b>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pairCards"></div>
+
+  <!-- 底部交易对账 (带滚动容器，即便上百笔也不会拉长屏幕) -->
+  <div id="tradesSection" style="display:none;margin-top:16px">
+    <div class="b-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <h3 style="margin-bottom:0">🧾 真实成交逐笔对账</h3>
+          <span style="font-size:11px;color:var(--dim)">(时间倒序 · 独立滚动)</span>
+        </div>
+        <span style="font-size:11px;color:var(--cyan);font-weight:700" id="tradeCountBadge">已成交 0 笔</span>
+      </div>
+      <div style="max-height:320px;overflow-y:auto;border-radius:10px;border:1px solid rgba(51,65,85,0.4)">
+        <table id="tradesTable">
+          <thead style="position:sticky;top:0;background:#0f172a;z-index:2"><tr><th>时间</th><th>标的</th><th>动作</th><th>价格</th><th>金额</th><th>出场/决策理由</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+let S=null, TOKEN=null, curPair='BTC_USDT', lastMsg=0;
+const $=id=>document.getElementById(id);
+const fmt=(x,d=2)=>x==null?'--':Number(x).toFixed(d);
+
+/* ─────────────────────────────────────────────────────────────
+   生动活泼的果蝇生物绘制器 (Vivid Living Fruit Fly Canvas)
+   原理：通过 HTML5 Canvas 绘制参数化仿生果蝇。
+   • 翅膀根据决策/下行神经元放电实时倾斜振动
+   • 复眼根据 K 线涨跌动态发光 (绿涨红跌)
+   • 触角与脑部 Kenyon 细胞根据多巴胺奖赏实时脉冲发光
+───────────────────────────────────────────────────────────── */
+const cv=$('flyCanvas'), ctx=cv.getContext('2d');
+let wingPhase=0, eyeColor='#06b6d4', auraAlpha=0.2, flyTilt=0;
+
+function drawVividFly(){
+  const w=cv.width, h=cv.height;
+  ctx.clearRect(0,0,w,h);
+  wingPhase += 0.25;
+
+  ctx.save();
+  ctx.translate(w/2, h/2 + Math.sin(wingPhase*0.5)*3);
+  ctx.rotate(flyTilt);
+
+  // 1. 脑部背景微光 (Kenyon Cells Glow)
+  const g = ctx.createRadialGradient(0,-18,2, 0,-18,45);
+  g.addColorStop(0, eyeColor);
+  g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0, -18, 45, 0, Math.PI*2); ctx.fill();
+
+  // 2. 翅膀 (Wings - 半透明渐变、带脉络微颤)
+  const wingSwing = Math.sin(wingPhase) * 0.28;
+  const drawWing = (side) => {
+    ctx.save();
+    ctx.translate(side * 8, -4);
+    ctx.rotate(side * (0.8 + wingSwing));
+    ctx.beginPath();
+    ctx.ellipse(side * 36, -10, 48, 16, side * 0.25, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(226,232,240,0.22)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // 翅脉
+    ctx.beginPath();
+    ctx.moveTo(0,0); ctx.lineTo(side*60,-10);
+    ctx.moveTo(side*20,-4); ctx.lineTo(side*45,-18);
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.stroke();
+    ctx.restore();
+  };
+  drawWing(-1); // 左翼
+  drawWing(1);  // 右翼
+
+  // 3. 腹部 (Abdomen)
+  ctx.fillStyle = '#1e293b';
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(0, 32, 16, 28, 0, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  // 腹部条纹
+  ctx.strokeStyle = '#0f172a';
+  for(let y=18; y<=44; y+=7){
+    ctx.beginPath(); ctx.moveTo(-12, y); ctx.lineTo(12, y); ctx.stroke();
+  }
+
+  // 4. 胸部 (Thorax)
+  ctx.fillStyle = '#334155';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 14, 16, 0, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+
+  // 5. 头部与脑 (Head)
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.ellipse(0, -20, 12, 10, 0, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+
+  // 6. 灵动的生物复眼 (Lively Compound Eyes)
+  const drawEye = (x) => {
+    ctx.fillStyle = eyeColor;
+    ctx.shadowColor = eyeColor;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.ellipse(x, -22, 6.5, 9, (x>0?0.3:-0.3), 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0; // reset
+    // 高光反光点
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(x + (x>0?1:-1), -24, 2, 0, Math.PI*2); ctx.fill();
+  };
+  drawEye(-9);
+  drawEye(9);
+
+  // 7. 触角 (Antennae - 随气味/多巴胺轻轻摆动)
+  const antShake = Math.sin(wingPhase*0.8)*2;
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-5, -28); ctx.quadraticCurveTo(-14 + antShake, -40, -18 + antShake, -42);
+  ctx.moveTo(5, -28); ctx.quadraticCurveTo(14 - antShake, -40, 18 - antShake, -42);
+  ctx.stroke();
+
+  ctx.restore();
+  requestAnimationFrame(drawVividFly);
+}
+requestAnimationFrame(drawVividFly);
+
+/* ─────────────────────────────────────────────────────────────
+   数据流与重点渲染逻辑 (Focus on What Truly Matters)
+───────────────────────────────────────────────────────────── */
+async function loadToken(){
+  try{
+    const r=await fetch('/api/token',{cache:'no-store'});
+    const j=await r.json();
+    if(j.token) TOKEN=j.token;
+  }catch(e){}
+}
+async function api(act, body){
+  if(!TOKEN) await loadToken();
+  const opts = {
+    method: 'post',
+    headers: {'X-Flygate-Token': TOKEN || '', 'Content-Type': 'application/json'}
+  };
+  if(body !== undefined) opts.body = JSON.stringify(body);
+  const res = await fetch('/api/' + act, opts);
+  try { return await res.json(); } catch(e) { return {}; }
+}
+
+function render(st){
+  S=st; lastMsg=Date.now();
+  $('eq').textContent = fmt(st.total_equity) + ' USDT';
+  const pnl = st.day_pnl || 0;
+  $('pnl').textContent = (pnl>=0?'+':'') + fmt(pnl) + ' USDT';
+  $('pnl').className = 'mono ' + (pnl>=0?'up':'dn');
+
+  // 双子教学超额差距
+  const sh = st.shadow;
+  if(sh && sh.gap != null){
+    $('shGap').textContent = (sh.gap>=0?'+':'') + fmt(sh.gap, 3) + ' U';
+    $('shGap').className = 'mono ' + (sh.gap>=0?'up':'dn');
+  }
+
+  // 学习监控：双子赛跑 / 突触漂移 / 多巴胺记分牌（含边界饱和）+ 权益曲线
+  drawEquity($('eqc'), st.equity_curve);
+  const ln = st.learning;
+  if(ln && (ln.gap_curve.length>1 || ln.w_curve.length>1
+          || ln.da_total.reward+ln.da_total.punish>0 || ln.trips_today>0)){
+    $('learnPanel').style.display='';
+    drawRace($('gapc'), ln.learner_curve, sh && sh.equity_curve);
+    drawW($('wc'), ln.w_curve);
+    $('daR').textContent=ln.da_today.reward; $('daP').textContent=ln.da_today.punish;
+    $('daRT').textContent=ln.da_total.reward; $('daPT').textContent=ln.da_total.punish;
+    $('trN').textContent=ln.trips_today;
+    const sat=ln.sat_now;
+    if(sat!=null){
+      $('satN').textContent=(sat*100).toFixed(1)+'%';
+      $('satN').style.color=sat>=0.3?'var(--red)':(sat>=0.15?'#f0b429':'var(--text)');
+    }
+    if(sh && sh.gap!=null){
+      $('gapNow').textContent=(sh.gap>=0?'+':'')+fmt(sh.gap)+' U';
+      $('gapNow').style.color=sh.gap>=0?'var(--green)':'var(--red)';
+    }
+    if(sh) $('shEq2').textContent=fmt(sh.total_equity)+' U';
+  }
+
+  // 1. 提取当前聚焦点品种
+  const pKeys = Object.keys(st.pairs || {});
+  if(!pKeys.includes(curPair)) curPair = pKeys[0] || 'BTC_USDT';
+
+  // 渲染品种选项卡
+  const pTabs = $('pairTabs');
+  if(pTabs.children.length !== pKeys.length){
+    pTabs.innerHTML = pKeys.map(k=>
+      `<button class="p-btn ${k===curPair?'active':''}" onclick="selectPair('${k}')">${k.replace('_USDT','')}</button>`
+    ).join('');
+  }
+
+  const ps = st.pairs[curPair];
+  if(!ps) return;
+  const t = ps.telemetry || {};
+  const pat = t.pattern || {};
+
+  // 2. 更新动态果蝇的生理与心理状态 (Update Living Fly Mood & Readout)
+  const up = t.hs_up || 0, dn = t.hs_dn || 0;
+  const dec = t.decision || 'HOLD';
+  const diff = t.diff_hz || 0;
+
+  flyTilt = Math.max(-0.35, Math.min(0.35, (up - dn) * 0.8));
+  $('heroTilt').textContent = (flyTilt>=0?'+':'') + (flyTilt * 57.3).toFixed(1) + '° ' + (flyTilt>0.05?'右倾爬升':(flyTilt<-0.05?'左倾俯冲':'水平平飞'));
+
+  const pairName = curPair.replace('_USDT','');
+  const pairDesc = {
+    'BTC': '比特币 (BTC)', 'ETH': '以太坊 (ETH)', 'SOL': '索拉纳 (SOL)',
+    'PONS': 'PONS', 'DOGE': '狗狗币 (DOGE)', 'XRP': '瑞波币 (XRP)',
+    'FUT_ZEC': 'ZEC 永续合约'
+  }[pairName] || (pairName + ' / USDT');
+
+  if($('heroTargetPair')) $('heroTargetPair').textContent = '正在注视: ' + pairDesc;
+
+  if(dec === 'BUY'){
+    eyeColor = '#10b981';
+    $('flyMood').style.background = 'rgba(16,185,129,0.2)';
+    $('flyMood').style.color = 'var(--green)';
+    $('flyMoodTxt').textContent = '买入信号激活 (4项门限全部满足)';
+  } else if(dec === 'SELL'){
+    eyeColor = '#f43f5e';
+    $('flyMood').style.background = 'rgba(244,63,94,0.2)';
+    $('flyMood').style.color = 'var(--red)';
+    $('flyMoodTxt').textContent = '卖出避险 (触发离场保护)';
+  } else {
+    eyeColor = '#06b6d4';
+    $('flyMood').style.background = 'rgba(6,182,212,0.15)';
+    $('flyMood').style.color = 'var(--cyan)';
+    $('flyMoodTxt').textContent = '冷静观望 (门限拦截震荡杂波)';
+  }
+
+  const c1_ok = diff >= 2.0;
+  const c2_ok = (t.dn_c_hz || 0) >= 1.0;
+  const c3_ok = (t.r2 || 0) >= 0.85;
+  const c4_ok = (t.gate || 0.5) > 0.45;
+
+  let whyText = "";
+  if(dec === 'BUY'){
+    whyText = `<span style="color:var(--green)">✔ 4项开仓门控全部满足，触发真实开多信号！</span>`;
+  } else if(dec === 'SELL'){
+    whyText = `<span style="color:var(--red)">⚠ 触发反向动能或硬止损，立即清仓避险！</span>`;
+  } else {
+    const reasons = [];
+    if(!c3_ok) reasons.push(`相干性 r²=${fmt(t.r2,3)} < 0.850(过滤假突破)`);
+    if(!c1_ok) reasons.push(`动能差分 diff=${fmt(diff,1)}Hz < 2.0Hz`);
+    if(!c2_ok) reasons.push(`承诺放电 dn_c=${fmt(t.dn_c_hz,1)}Hz < 1.0Hz`);
+    if(!c4_ok) reasons.push(`交易阀门 g=${fmt(t.gate,3)} ≤ 0.450`);
+    whyText = `<span style="color:var(--gold)">✋ 观望硬指标拦截: ${reasons.join('；')}</span>`;
+  }
+
+  $('flyThought').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px 16px;margin-bottom:8px;font-size:11.5px">
+      <div>① 动能放电差分: <b class="${c1_ok?'up':'mono'}">${(diff>=0?'+':'')+fmt(diff,1)} Hz</b> <span style="color:var(--dim)">(标准 ≥ +2.0)</span> [${c1_ok?'<span class="up">✔达标</span>':'<span class="dn">❌未达标</span>'}]</div>
+      <div>② 承诺神经放电: <b class="${c2_ok?'up':'mono'}">${fmt(t.dn_c_hz,1)} Hz</b> <span style="color:var(--dim)">(标准 ≥ 1.0)</span> [${c2_ok?'<span class="up">✔达标</span>':'<span class="dn">❌未达标</span>'}]</div>
+      <div>③ 趋势相干性 (r²): <b class="${c3_ok?'up':'mono'}">${fmt(t.r2,3)}</b> <span style="color:var(--dim)">(标准 ≥ 0.850)</span> [${c3_ok?'<span class="up">✔达标</span>':'<span class="dn">❌未达标(拦截防套牢)</span>'}]</div>
+      <div>④ 蘑菇体交易阀门 (g): <b class="${c4_ok?'up':'mono'}">${fmt(t.gate,3)}</b> <span style="color:var(--dim)">(标准 > 0.450)</span> [${c4_ok?'<span class="up">✔达标</span>':'<span class="dn">❌未达标</span>'}]</div>
+    </div>
+    <div style="padding-top:6px;border-top:1px dashed rgba(148,163,184,0.2);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div>${whyText}</div>
+      <div style="font-size:11px;color:var(--dim)">Gate.io 官方最新价: <b style="color:#fff">$${fmt(ps.price, ps.price>1000?1:4)}</b> · 决策步数: ${t.obs||0}</div>
+    </div>
+  `;
+
+  $('heroRegime').textContent = pat.regime || '分析中';
+  $('heroSim').textContent = Math.round((pat.similarity || 0.8) * 100) + '%';
+  const daTotal = (st.learning && st.learning.da_total) ? st.learning.da_total.reward : 0;
+  $('heroDopamine').textContent = daTotal + ' 滴糖水 🍯';
+
+  // 3. 渲染主卡片 (Focused Trading Card)
+  const isFut = curPair.startsWith('FUT_');
+  const dir = isFut?(t.dir||'FLAT'):((ps.position_base>1e-6)?'LONG':'FLAT');
+  const pnlv = isFut?(t.pnl_pct!=null?t.pnl_pct:0)
+               :(ps.position_base>1e-6&&ps.position_notional>0?(ps.price/(ps.position_notional/ps.position_base)-1)*100:0);
+
+  $('pairCards').innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span>${curPair.replace('_USDT','')}</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,0.1);color:var(--dim)">${isFut?'合约':'现货'}</span>
+        </div>
+        <div class="cur-price mono ${up>dn?'up':'dn'}">$${fmt(ps.price, ps.price>1000?1:4)}</div>
+      </div>
+
+      <div class="core-grid">
+        <div class="chart-box">
+          <canvas class="chart" id="cv_main"></canvas>
+        </div>
+
+        <div class="decision-box">
+          <div class="decision-card">
+            <div>
+              <div style="font-size:11px;color:var(--dim);margin-bottom:2px">果蝇当前指令</div>
+              <div style="font-size:12px;color:#cbd5e1">${t.obs||0} 步决策</div>
+            </div>
+            <div class="decision-badge d-${dec}">${{BUY:'买入开多',SELL:'卖出避险',HOLD:'保持观望'}[dec]||dec}</div>
+          </div>
+
+          <div class="pos-summary">
+            <div class="pos-cell">
+              <label>持仓状态</label>
+              <b style="color:${dir==='LONG'?'var(--green)':dir==='SHORT'?'var(--red)':'var(--dim)'}">${{LONG:'持多',SHORT:'持空',FLAT:'空仓'}[dir]}</b>
+            </div>
+            <div class="pos-cell">
+              <label>持仓金额</label>
+              <b class="mono">${fmt(ps.position_notional)} U</b>
+            </div>
+            <div class="pos-cell">
+              <label>浮动盈亏</label>
+              <b class="mono ${pnlv>=0?'up':'dn'}">${(pnlv>=0?'+':'')+fmt(pnlv,2)}%</b>
+            </div>
+          </div>
+
+          <div style="background:rgba(15,23,42,0.6);border:1px solid var(--card-border);border-radius:12px;padding:12px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:6px">
+              <span>🎯 历史形态雷达: <b style="color:#fff">${pat.regime||'蓄势中'}</b></span>
+              <span>匹配度: <b style="color:var(--cyan)">${Math.round((pat.similarity||0.8)*100)}%</b></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim)">
+              <span>胜率预期: <b style="color:var(--green)">${Math.round((pat.win_rate||0.5)*100)}%</b></span>
+              <span>可用资金: <b class="mono" style="color:#fff">${fmt(ps.cash,1)} U</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="details-toggle" onclick="toggleAdv()">
+        <span id="advToggleText">▼ 展开底层生物神经放电指标 (专家模式)</span>
+      </div>
+      <div class="adv-panel" id="advPanel">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;font-size:11.5px">
+          <div>上涨动能 (hs_up): <b class="mono up">${Math.round(up*100)}%</b></div>
+          <div>下跌动能 (hs_dn): <b class="mono dn">${Math.round(dn*100)}%</b></div>
+          <div>趋势质量 (r²): <b class="mono">${fmt(t.r2,2)}</b> (门限 0.85)</div>
+          <div>交易门控 (g): <b class="mono">${fmt(t.gate,2)}</b> (门限 0.45)</div>
+          <div>放电差分: <b class="mono">${fmt(t.diff_hz,1)} Hz</b></div>
+          <div>承诺放电: <b class="mono">${fmt(t.dn_c_hz,1)} Hz</b></div>
+          <div>突触权值 wₐ: <b class="mono">${fmt(t.w_a_mean,3)}</b></div>
+          <div>突触权值 wᵥ: <b class="mono">${fmt(t.w_v_mean,3)}</b></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  drawCandles($('cv_main'), ps.candles, ps.trades);
+
+  const allTrades = [];
+  for(const p in st.pairs)(st.pairs[p].trades||[]).forEach(x=>allTrades.push(x));
+  allTrades.sort((a,b)=>b.ts-a.ts);
+  
+  const sec = $('tradesSection');
+  if(sec){
+    if(allTrades.length > 0){
+      sec.style.display = 'block';
+      const badge = $('tradeCountBadge');
+      if(badge) badge.textContent = `已成交 ${allTrades.length} 笔`;
+      if($('tradesTable')) {
+        $('tradesTable').tBodies[0].innerHTML = allTrades.slice(0, 100).map(tr =>
+          `<tr><td>${tr.time}</td><td><b>${tr.pair.replace('_USDT','')}</b></td><td style="color:${tr.side==='BUY'?'var(--green)':'var(--red)'};font-weight:700">${tr.side==='BUY'?'买入开多':'卖出避险'}</td><td class="mono">$${fmt(tr.price, tr.price>1000?1:4)}</td><td class="mono">${fmt(tr.quote)} U</td><td style="color:var(--dim)">${tr.reason||'神经决策'}</td></tr>`
+        ).join('');
+      }
+    } else {
+      sec.style.display = 'none';
+    }
+  }
+}
+
+function selectPair(k){
+  curPair = k;
+  const pTabs = $('pairTabs');
+  for(let b of pTabs.children){
+    b.className = 'p-btn ' + (b.textContent === k.replace('_USDT','') ? 'active' : '');
+  }
+  if(S) render(S);
+}
+
+function toggleAdv(){
+  const p = $('advPanel');
+  const txt = $('advToggleText');
+  if(!p) return;
+  const show = p.style.display === 'block';
+  p.style.display = show ? 'none' : 'block';
+  txt.textContent = show ? '▼ 展开底层生物神经放电指标 (专家模式)' : '▲ 收起底层指标';
+}
+
+function drawCandles(cv,cds,trades){
+  if(!cv || !cds || cds.length < 2) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 500, h = 220;
+  if(cv.width !== w*dpr || cv.height !== h*dpr){ cv.width=w*dpr; cv.height=h*dpr; }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  const n = cds.length, pad = 8;
+  const lo = Math.min(...cds.map(c=>c[3])), hi = Math.max(...cds.map(c=>c[2]));
+  const span = (hi - lo) || 1, y = p => h - pad - (p - lo) / span * (h - 2*pad);
+  const barw = (w - 2*pad) / n;
+  for(let i=0; i<n; i++){
+    const c = cds[i], cx = pad + i*barw + barw/2, up = c[4] >= c[1];
+    ctx.strokeStyle = up ? '#10b981' : '#f43f5e'; ctx.fillStyle = ctx.strokeStyle;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx, y(c[2])); ctx.lineTo(cx, y(c[3])); ctx.stroke();
+    const y1 = y(Math.max(c[1], c[4])), y2 = y(Math.min(c[1], c[4]));
+    ctx.fillRect(cx - barw*0.35, y1, Math.max(1, barw*0.7), Math.max(1.5, y2 - y1));
+  }
+}
+
+function drawEquity(cv, curve){
+  if(!cv || !curve || curve.length < 2) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 400, h = 150;
+  if(cv.width !== w*dpr || cv.height !== h*dpr){ cv.width=w*dpr; cv.height=h*dpr; }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  const vals = curve.map(c=>c[1]);
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const span = (hi - lo) || 1, X = i => i / (curve.length - 1) * (w - 16) + 8, Y = v => h - 12 - (v - lo) / span * (h - 26);
+  const up = vals[vals.length - 1] >= vals[0];
+  ctx.strokeStyle = up ? '#10b981' : '#f43f5e'; ctx.lineWidth = 2;
+  ctx.beginPath(); curve.forEach((c,i)=>i?ctx.lineTo(X(i), Y(c[1])):ctx.moveTo(X(i), Y(c[1]))); ctx.stroke();
+}
+
+function drawRace(cv,lc,sc){         // twin race: both normalized to % from own start
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=cv.clientWidth||400,h=120;
+  const bw=Math.round(w*dpr),bh=Math.round(h*dpr);
+  if(cv.width!==bw||cv.height!==bh){cv.width=bw;cv.height=bh;}
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  if(!lc||!sc||lc.length<2||sc.length<2)return;
+  const L0=lc[0][1],S0=sc[0][1];
+  if(!(L0>0)||!(S0>0))return;
+  const L=lc.map(c=>(c[1]/L0-1)*100),S=sc.map(c=>(c[1]/S0-1)*100);
+  const vals=L.concat(S,0);
+  let lo=Math.min(...vals),hi=Math.max(...vals);
+  const pad=(hi-lo)||1;lo-=pad*0.15;hi+=pad*0.15;
+  const n=Math.max(L.length,S.length);
+  const X=i=>i/(n-1)*(w-10)+5,Y=x=>h-8-(x-lo)/(hi-lo)*(h-16);
+  ctx.strokeStyle='#3d2e08';ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(0,Y(0));ctx.lineTo(w,Y(0));ctx.stroke();ctx.setLineDash([]);
+  const draw=(s,col,dash)=>{ctx.strokeStyle=col;ctx.lineWidth=1.8;
+    if(dash)ctx.setLineDash([4,3]);
+    ctx.beginPath();s.forEach((x,i)=>i?ctx.lineTo(X(i),Y(x)):ctx.moveTo(X(i),Y(x)));ctx.stroke();
+    ctx.setLineDash([]);};
+  draw(S,'#b48bff',true);draw(L,'#2bd4a4',false);
+  const lEnd=L[L.length-1],sEnd=S[S.length-1];
+  ctx.font='bold 10px sans-serif';
+  ctx.fillStyle='#2bd4a4';
+  ctx.fillText('学习蝇'+(lEnd>=0?'+':'')+lEnd.toFixed(2)+'%',w-98,Math.max(12,Y(lEnd)-4));
+  ctx.fillStyle='#b48bff';
+  ctx.fillText('影子'+(sEnd>=0?'+':'')+sEnd.toFixed(2)+'%',w-98,Math.min(h-4,Y(sEnd)+13));
+}
+
+function drawW(cv,curve){            // synaptic drift as % deviation from anatomy baseline
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=cv.clientWidth||400,h=120;
+  const bw=Math.round(w*dpr),bh=Math.round(h*dpr);
+  if(cv.width!==bw||cv.height!==bh){cv.width=bw;cv.height=bh;}
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  if(!curve||curve.length<2)return;
+  const drift=(i,c)=>c[3+i]>1e-9?(c[1+i]-c[3+i])/c[3+i]*100:0;
+  const a=curve.map(c=>drift(0,c)),v=curve.map(c=>drift(1,c));
+  const vals=a.concat(v,0);
+  let lo=Math.min(...vals),hi=Math.max(...vals);
+  const pad=(hi-lo)||1;lo-=pad*0.15;hi+=pad*0.15;
+  const X=i=>i/(curve.length-1)*(w-10)+5,Y=x=>h-8-(x-lo)/(hi-lo)*(h-16);
+  ctx.strokeStyle='#3d2e08';ctx.setLineDash([4,3]);           // baseline = 0
+  ctx.beginPath();ctx.moveTo(0,Y(0));ctx.lineTo(w,Y(0));ctx.stroke();ctx.setLineDash([]);
+  ctx.lineWidth=1.6;
+  [[a,'#2bd4a4'],[v,'#b48bff']].forEach(([s,col])=>{
+    ctx.strokeStyle=col;ctx.beginPath();
+    s.forEach((x,i)=>i?ctx.lineTo(X(i),Y(x)):ctx.moveTo(X(i),Y(x)));ctx.stroke();
+  });
+  const la=a[a.length-1],lv=v[v.length-1];
+  ctx.font='bold 10px sans-serif';
+  ctx.fillStyle='#2bd4a4';ctx.fillText('接近'+(la>=0?'+':'')+la.toFixed(2)+'%',w-84,Y(la)-4);
+  ctx.fillStyle='#b48bff';ctx.fillText('回避'+(lv>=0?'+':'')+lv.toFixed(2)+'%',w-84,Y(lv)+12);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   每日盈亏战报与标的透视 (Daily Performance Reporting)
+───────────────────────────────────────────────────────────── */
+let selectedDailyDate = null;
+let dailyDataList = [];
+let isDailyPanelOpen = false;
+
+function toggleDailyPanel(forceOpen=false){
+  const content = $('dailyPanelContent');
+  const arrow = $('dailyToggleArrow');
+  if(!content) return;
+  if(forceOpen){
+    isDailyPanelOpen = true;
+  } else {
+    isDailyPanelOpen = !isDailyPanelOpen;
+  }
+  content.style.display = isDailyPanelOpen ? 'block' : 'none';
+  if(arrow) arrow.textContent = isDailyPanelOpen ? '▲ 点击收起战报' : '▼ 点击展开每日明细与历史对比';
+  if(isDailyPanelOpen){
+    const wrap = $('dailyCardWrap');
+    if(wrap) wrap.scrollIntoView({behavior: 'smooth', block: 'start'});
+    fetchDailyData();
+  }
+}
+
+async function fetchDailyData(){
+  try {
+    const res = await fetch('/api/daily', {cache: 'no-store'});
+    if(res.ok){
+      const data = await res.json();
+      if(Array.isArray(data) && data.length > 0){
+        dailyDataList = data;
+        renderDailyUI();
+        return;
+      }
+    }
+  } catch(e){}
+  renderDailyFallback();
+}
+
+function selectDailyDate(d){
+  selectedDailyDate = d;
+  renderDailyUI();
+}
+
+function renderDailyUI(){
+  if(!dailyDataList || dailyDataList.length === 0){
+    renderDailyFallback();
+    return;
+  }
+  const dates = dailyDataList.map(x=>x.date);
+  if(!selectedDailyDate || !dates.includes(selectedDailyDate)){
+    selectedDailyDate = dates[0];
+  }
+  
+  // Sync top badge
+  const badge = $('dailySummaryBadge');
+  if(badge && dailyDataList.length > 0){
+    const todayItem = dailyDataList[0];
+    const sign = todayItem.net_pnl >= 0 ? '+' : '';
+    badge.textContent = `今日: ${sign}${fmt(todayItem.net_pnl, 2)} U · ${todayItem.trades_count} 笔交易`;
+    badge.style.color = todayItem.net_pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    badge.style.borderColor = todayItem.net_pnl >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(244,63,94,0.3)';
+    badge.style.background = todayItem.net_pnl >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)';
+  }
+  
+  const tabs = $('dailyDateTabs');
+  const sel = $('dailyDateSelect');
+  if(tabs){
+    // Show max 5 quick tabs to avoid screen overflow
+    const quickItems = dailyDataList.slice(0, 5);
+    tabs.innerHTML = quickItems.map(item => {
+      const isCur = item.date === selectedDailyDate;
+      const label = item.is_today ? `今日 (${item.date.slice(5)})` : item.date;
+      const pnlColor = item.net_pnl > 0 ? 'var(--green)' : item.net_pnl < 0 ? 'var(--red)' : 'var(--dim)';
+      const pnlStr = (item.net_pnl > 0 ? '+' : '') + fmt(item.net_pnl, 2) + ' U';
+      return `<button class="p-btn ${isCur?'active':''}" onclick="selectDailyDate('${item.date}')">${label} <span style="font-size:11px;color:${pnlColor}">[${pnlStr}]</span></button>`;
+    }).join('');
+  }
+  if(sel){
+    sel.innerHTML = dailyDataList.map(item => {
+      const label = (item.is_today ? `今日 ` : '') + item.date + ` (${item.net_pnl>=0?'+':''}${fmt(item.net_pnl,2)} U)`;
+      return `<option value="${item.date}" ${item.date===selectedDailyDate?'selected':''}>${label}</option>`;
+    }).join('');
+    sel.style.display = dailyDataList.length > 3 ? 'inline-block' : 'none';
+  }
+  
+  const curItem = dailyDataList.find(x => x.date === selectedDailyDate) || dailyDataList[0];
+  if(!curItem) return;
+  
+  const pnlCls = curItem.net_pnl >= 0 ? 'up' : 'dn';
+  const ov = $('dailyDayOverview');
+  if(ov){
+    ov.innerHTML = `
+      <div>
+        <span style="font-size:11px;color:var(--dim)">期初基准总权益</span>
+        <b class="mono" style="font-size:15px;display:block;margin-top:2px">${fmt(curItem.start_equity)} USDT</b>
+      </div>
+      <div>
+        <span style="font-size:11px;color:var(--dim)">期末结算总权益</span>
+        <b class="mono" style="font-size:15px;display:block;margin-top:2px">${fmt(curItem.end_equity)} USDT</b>
+      </div>
+      <div>
+        <span style="font-size:11px;color:var(--dim)">当日净盈亏 (Net PnL)</span>
+        <b class="mono ${pnlCls}" style="font-size:15px;display:block;margin-top:2px">${(curItem.net_pnl>=0?'+':'')+fmt(curItem.net_pnl)} USDT</b>
+      </div>
+      <div>
+        <span style="font-size:11px;color:var(--dim)">当日成交概览</span>
+        <b style="font-size:15px;display:block;margin-top:2px">${curItem.trades_count} 笔订单 (${curItem.trips_count} 轮闭环)</b>
+      </div>
+      <div>
+        <span style="font-size:11px;color:var(--dim)">突触自适应奖惩</span>
+        <b style="font-size:15px;display:block;margin-top:2px"><span class="up">+${curItem.da_reward} 蜜糖</span> / <span class="dn">-${curItem.da_punish} 惩罚</span></b>
+      </div>
+    `;
+  }
+  
+  const tbl = $('dailyPairsTable');
+  if(tbl && tbl.tBodies[0]){
+    const filterZero = $('filterZeroTrades') ? $('filterZeroTrades').checked : false;
+    let pairsToRender = curItem.pairs || [];
+    if(filterZero){
+      pairsToRender = pairsToRender.filter(p => p.buys > 0 || p.sells > 0 || Math.abs(p.pnl) > 0.001);
+    }
+    
+    let rowsHtml = '';
+    pairsToRender.forEach(p => {
+      const pCls = p.pnl > 0 ? 'up' : p.pnl < 0 ? 'dn' : '';
+      const pStr = (p.pnl > 0 ? '+' : '') + fmt(p.pnl, 2) + ' U';
+      const pxText = (p.avg_buy_px > 0 || p.avg_sell_px > 0)
+        ? `<span class="mono" style="font-size:11.5px">买 $${fmt(p.avg_buy_px, p.avg_buy_px>1000?1:4)} / 卖 $${fmt(p.avg_sell_px, p.avg_sell_px>1000?1:4)}</span>`
+        : '<span style="color:var(--dim)">未成交</span>';
+      const buyText = p.buys > 0 ? `<b style="color:var(--green)">${p.buys} 笔买入</b> <span class="mono" style="color:var(--dim)">(${fmt(p.buy_vol,1)} U)</span>` : '<span style="color:var(--dim)">0 笔</span>';
+      const sellText = p.sells > 0 ? `<b style="color:var(--red)">${p.sells} 笔卖出</b> <span class="mono" style="color:var(--dim)">(${fmt(p.sell_vol,1)} U)</span>` : '<span style="color:var(--dim)">0 笔</span>';
+      const reasonsList = (p.reasons || []).filter(r => r && r !== '-');
+      const reasonsText = reasonsList.length > 0 ? reasonsList.join('； ') : '<span style="color:var(--dim)">门限杂波过滤</span>';
+      
+      rowsHtml += `<tr>
+        <td><b>${p.name}</b> <span style="font-size:11px;color:var(--dim)">现货</span></td>
+        <td>${buyText}</td>
+        <td>${sellText}</td>
+        <td>${pxText}</td>
+        <td class="mono ${pCls}" style="font-weight:700">${pStr}</td>
+        <td style="color:var(--dim);font-size:11.5px">${reasonsText}</td>
+      </tr>`;
+    });
+    
+    if(pairsToRender.length === 0){
+      rowsHtml = `<tr><td colspan="6" style="text-align:center;color:var(--dim);padding:18px">该日所选标的均无买卖成交。</td></tr>`;
+    }
+    
+    if(curItem.futures){
+      const f = curItem.futures;
+      const fCls = f.pnl > 0 ? 'up' : f.pnl < 0 ? 'dn' : '';
+      const fStr = (f.pnl > 0 ? '+' : '') + fmt(f.pnl, 2) + ' U';
+      rowsHtml += `<tr>
+        <td><b>${f.contract.replace('_USDT','')}</b> <span style="font-size:11px;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,0.1);color:var(--dim)">合约</span></td>
+        <td colspan="2"><span style="color:var(--dim)">预算 ${fmt(f.budget, 0)} U · 事件 ${f.events_count} 次</span></td>
+        <td><span class="mono" style="color:var(--dim)">现金: ${fmt(f.cash, 1)} U</span></td>
+        <td class="mono ${fCls}" style="font-weight:700">${fStr}</td>
+        <td style="color:var(--dim);font-size:11.5px">趋势相干性衰退主动平仓</td>
+      </tr>`;
+    }
+    
+    tbl.tBodies[0].innerHTML = rowsHtml;
+  }
+}
+
+function renderDailyFallback(){
+  if(!S) return;
+  const pKeys = Object.keys(S.pairs || {});
+  const pairsList = pKeys.map(k => {
+    const ps = S.pairs[k] || {};
+    const trs = ps.trades || [];
+    const buys = trs.filter(t=>t.side==='BUY');
+    const sells = trs.filter(t=>t.side==='SELL');
+    const buyVol = buys.reduce((acc,x)=>acc+(x.quote||0), 0);
+    const sellVol = sells.reduce((acc,x)=>acc+(x.quote||0), 0);
+    const fee = trs.reduce((acc,x)=>acc+(x.fee||0), 0);
+    const alloc = k === 'PONS_USDT' ? 40 : 100;
+    const pnl = (ps.cash || alloc) - alloc;
+    return {
+      pair: k,
+      name: k.replace('_USDT',''),
+      buys: buys.length,
+      sells: sells.length,
+      buy_vol: buyVol,
+      sell_vol: sellVol,
+      fee: fee,
+      pnl: pnl,
+      avg_buy_px: buys.length > 0 ? (buys.reduce((acc,x)=>acc+x.price,0)/buys.length) : 0,
+      avg_sell_px: sells.length > 0 ? (sells.reduce((acc,x)=>acc+x.price,0)/sells.length) : 0,
+      reasons: trs.map(t=>t.reason).filter(Boolean)
+    };
+  });
+  
+  dailyDataList = [{
+    date: new Date().toISOString().slice(0,10),
+    is_today: true,
+    start_equity: S.total_equity - (S.day_pnl || 0),
+    end_equity: S.total_equity,
+    net_pnl: S.day_pnl || 0,
+    trades_count: pairsList.reduce((acc,x)=>acc+x.buys+x.sells, 0),
+    trips_count: (S.learning && S.learning.trips_today) || 0,
+    da_reward: (S.learning && S.learning.da_today) ? S.learning.da_today.reward : 0,
+    da_punish: (S.learning && S.learning.da_today) ? S.learning.da_today.punish : 0,
+    pairs: pairsList
+  }];
+  renderDailyUI();
+}
+
+function connect(){
+  const es = new EventSource('/api/stream');
+  es.onmessage = e => {
+    try {
+      render(JSON.parse(e.data));
+      $('conn').textContent = '● 实时正常';
+      $('conn').style.color = 'var(--green)';
+    } catch(err){}
+  };
+  es.onerror = () => {
+    $('conn').textContent = '○ 重连中…';
+    $('conn').style.color = 'var(--red)';
+    es.close(); setTimeout(connect, 3000);
+  };
+}
+
+loadToken().then(()=>fetch('/api/state').then(r=>r.json()).then(render).then(()=>{
+  fetchDailyData();
+  setInterval(fetchDailyData, 15000);
+  connect();
+}));
+</script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+{
+ "pairs": [
+  "BTC_USDT",
+  "ETH_USDT",
+  "SOL_USDT",
+  "PONS_USDT",
+  "DOGE_USDT",
+  "XRP_USDT"
+ ],
+ "brain": {
+  "dopamine_deadband": 0.008,
+  "mbon_inhibition": true,
+  "real_wired": true,
+  "mbon_to_dn": true,
+  "action_gated_elig": true,
+  "elig_normalize": true,
+  "trip_teaching": true,
+  "rule": "huang2024",
+  "eta": 4.0,
+  "eta_rule": 0.1,
+  "dan_magnitude_coding": true,
+  "dan_mag_cap": 4.0,
+  "punish_deadband_mult": 2.0
+ },
+ "budgets": {
+  "PONS_USDT": 40
+ },
+ "risk": {
+  "loom_exit": true,
+  "order_notional": 10,
+  "max_orders_per_day": 0,
+  "cooldown_s": 300,
+  "daily_loss_halt": 21,
+  "peak_drawdown_halt_pct": 20,
+  "breakeven_trigger": 0.015,
+  "breakeven_buffer": 0.002,
+  "profit_lock_gain": 0.03,
+  "position_caps": {
+   "PONS_USDT": 40
+  },
+  "floor_ladder": [
+   [
+    0.03,
+    0.015
+   ],
+   [
+    0.06,
+    0.03
+   ],
+   [
+    0.1,
+    0.05
+   ]
+  ]
+ },
+ "futures": {
+  "enable": true,
+  "contract": "ZEC_USDT",
+  "budget": 200,
+  "paper": true,
+  "max_contracts": 12,
+  "entry_step": 3,
+  "chase_pct": 0.06,
+  "chase_n": 20,
+  "entry_mode": "regime",
+  "regime_r2": 0.45,
+  "regime_n": 96,
+  "mr_buy_atr": 3.0,
+  "mr_sell_atr": 0.5,
+  "mr_max_hs_dn": 0.6,
+  "hard_stop_pct": 0.035,
+  "quanto": 0.01,
+  "fee": 0.0005,
+  "no_flip": true,
+  "interval": "5m",
+  "long_only": true
+ }
+}

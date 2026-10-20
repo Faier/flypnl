@@ -1,0 +1,32 @@
+#!/bin/bash
+# flygate main-branch guard (pre-push hook).
+#
+# Server-side branch protection is unavailable on a private repo without
+# GitHub Pro, so this hook enforces the same rule at push time: any update to
+# refs/heads/main — fast-forward, force, or deletion — is refused unless it is
+# explicitly overridden. Experiment branches (phase01-*) must never reach main
+# by accident; graduating a change to main is a deliberate act:
+#
+#   FLYGATE_ALLOW_MAIN=1 git push origin <something>:main
+#
+# Install (per clone):  install -m 755 scripts/pre-push-guard .git/hooks/pre-push
+# Known limit: PR merges done on github.com bypass local hooks entirely.
+zero=0000000000000000000000000000000000000000
+rc=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+    case "$remote_ref" in
+        refs/heads/main)
+            if [ -z "$FLYGATE_ALLOW_MAIN" ]; then
+                echo >&2 "[flygate] BLOCKED: push to main without override."
+                if [ "$local_sha" = "$zero" ]; then
+                    echo >&2 "[flygate] this would DELETE main."
+                else
+                    echo >&2 "[flygate] experiment work stays on its branch;"
+                    echo >&2 "[flygate] graduate deliberately with: FLYGATE_ALLOW_MAIN=1 git push origin <ref>:main"
+                fi
+                rc=1
+            fi
+            ;;
+    esac
+done
+exit $rc

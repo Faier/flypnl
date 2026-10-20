@@ -1,0 +1,13 @@
+# private state — never publish
+engine/runs/
+engine/.env
+engine/data/cache/
+*.npz
+*.broker.json
+*.pos.json
+runs/
+.DS_Store
+__pycache__/
+*.pyc
+.pytest_cache/
+.idea/

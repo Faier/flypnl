@@ -1,0 +1,10 @@
+runs/
+/radar/
+data/cache/
+data/connectome/
+.env
+.idea/
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
