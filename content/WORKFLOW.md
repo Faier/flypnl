@@ -1,0 +1,32 @@
+# WORKFLOW — 「说一句，就生成」协议
+
+> 用户一句话触发，助手执行完整生产循环。此文件是对话协议的固化：
+> 任何会话读到它就能按同一标准出稿。
+
+## 触发词 → 动作
+
+| 用户说 | 助手做 |
+|---|---|
+| **"生成推文"** / "生成内容" / "今天发什么" | 完整循环（见下） |
+| **"生成配图"** | `tools/make_retina_chart.py` + 必要的自定义图 → charts/ |
+| **"门怎么样了"** / "看看门" | `python3 tools/gate_watch.py`，报告门/撤退线状态 |
+| **"存档"** | 刷新 data/ 导出 + git commit |
+
+## 完整循环（"生成推文"时执行）
+
+1. **刷数据**（全部只读）：
+   - `python3 tools/gate_watch.py`（费率门状态）
+   - `python3 tools/export_from_flygate.py`（A股动量/费率时序刷新）
+2. **挑今天的故事**：优先级 = 实时事件（门开/撤退/熔断）> 周数据帖 > 判决/事故存货
+   （素材库：`data/verdicts.md`、`engine/runs/reports/`、`posts/`）
+3. **出稿**：`posts/YYYY-MM-DD-*.md`，每篇含：
+   - EN 主帖（≤280 字符/条，thread 拆好）+ 中文副本（小红书/微信用）
+   - 写作规范：`content/templates.md` 的去 AI 味八条（有"我"、具体数字压倒形容词、结尾别升华）
+   - 配图指定：charts/ 里哪张
+4. **红线**：不喊单、亏损照发、无绝对余额（百分比出门）、每帖带 not financial advice
+5. 发布由用户手动完成；发完把互动数补进该篇 md
+
+## 语言与节奏
+
+- EN 主发（fintwit + neurotwitter），中文副本同步
+- 每周 2–3 篇起步；连续剧格式："flypnl day/week N: …"
