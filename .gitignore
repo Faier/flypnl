@@ -1,5 +1,6 @@
-# private state — never publish
-engine/runs/
+# private state — never publish (but keep the empty runs/ dir via .gitkeep)
+engine/runs/*
+!engine/runs/.gitkeep
 engine/.env
 engine/data/cache/
 *.npz
@@ -11,3 +12,4 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .idea/
+state/

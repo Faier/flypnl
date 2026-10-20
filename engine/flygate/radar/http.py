@@ -7,8 +7,13 @@ from __future__ import annotations
 
 import json
 import logging
+import socket
 import time
 import urllib.request
+
+# 进程级兜底：radar 线程池里任何没带显式 timeout 的 socket 操作也 ≤15s。
+# （getaddrinfo 不受此约束——残余挂起由引擎 HangGuard SIGKILL 兜底。）
+socket.setdefaulttimeout(15)
 
 log = logging.getLogger("flygate.radar")
 

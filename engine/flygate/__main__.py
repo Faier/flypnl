@@ -125,6 +125,11 @@ def cmd_live(cfg, args):
 
 
 def main():
+    # 冻结根治（10-12 ALERTS 处方第一步）：进程级 socket 超时。任何线程新建的
+    # socket——gate_client/radar/connectome/SSE——connect/recv 都 ≤15s。
+    # getaddrinfo(DNS) 不受此约束，残余挂起由 HangGuard 心跳看门狗 SIGKILL 兜底。
+    import socket
+    socket.setdefaulttimeout(15)
     ap = argparse.ArgumentParser(prog="flygate")
     ap.add_argument("--config", default=None, help="path to config.json")
     sub = ap.add_subparsers(dest="cmd", required=True)

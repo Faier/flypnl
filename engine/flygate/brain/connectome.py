@@ -53,7 +53,7 @@ def download(names: tuple = ("annotations", "neurotransmitters", "edges"),
             continue
         headers = {"Range": f"bytes={have}-"} if have else {}
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req) as r, open(path, "ab" if have else "wb") as f:
+        with urllib.request.urlopen(req, timeout=15) as r, open(path, "ab" if have else "wb") as f:
             while True:
                 chunk = r.read(1 << 22)
                 if not chunk:
@@ -65,7 +65,7 @@ def download(names: tuple = ("annotations", "neurotransmitters", "edges"),
 def _head_content_length(url: str) -> int | None:
     try:
         req = urllib.request.Request(url, method="HEAD")
-        with urllib.request.urlopen(req) as r:
+        with urllib.request.urlopen(req, timeout=15) as r:
             return int(r.headers.get("Content-Length") or 0)
     except OSError:
         return None
