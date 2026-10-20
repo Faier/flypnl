@@ -1,0 +1,21 @@
+{
+  "ai": {
+    "provider": "zhipu",
+    "api_key": "",
+    "base_url": "https://open.bigmodel.cn/api/paas/v4",
+    "model": "glm-4-flash",
+    "temperature": 0.4
+  },
+  "settings": {
+    "filter_politics": true,
+    "cache_expire_sec": 300,
+    "default_template": "C",
+    "default_platforms": [
+      "x",
+      "binance",
+      "wechat",
+      "xiaohongshu",
+      "telegram"
+    ]
+  }
+}

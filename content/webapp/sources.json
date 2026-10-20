@@ -1,0 +1,131 @@
+{
+  "sources": [
+    {
+      "name": "CoinDesk",
+      "type": "rss",
+      "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+      "enabled": true,
+      "id": "coindesk_c5f8ed4b",
+      "category": "币圈"
+    },
+    {
+      "name": "Cointelegraph",
+      "type": "rss",
+      "url": "https://cointelegraph.com/rss",
+      "enabled": true,
+      "id": "cointelegraph_b6c45aea",
+      "category": "币圈"
+    },
+    {
+      "name": "The Block",
+      "type": "rss",
+      "url": "https://www.theblock.co/rss.xml",
+      "enabled": true,
+      "id": "the_block_9ae0a25b",
+      "category": "币圈"
+    },
+    {
+      "name": "Decrypt",
+      "type": "rss",
+      "url": "https://decrypt.co/feed",
+      "enabled": true,
+      "id": "decrypt_762e3a77",
+      "category": "币圈"
+    },
+    {
+      "name": "Google 新闻",
+      "type": "google_news",
+      "url": "",
+      "enabled": true,
+      "id": "google_329b8e86",
+      "category": "热点"
+    },
+    {
+      "name": "Reddit",
+      "type": "reddit",
+      "url": "",
+      "subs": [
+        "CryptoCurrency",
+        "wallstreetbets",
+        "stocks"
+      ],
+      "enabled": true,
+      "id": "reddit_b632c55a",
+      "category": "热点"
+    },
+    {
+      "name": "Hacker News",
+      "type": "hn",
+      "url": "",
+      "enabled": true,
+      "id": "hacker_news_f3e4cbce",
+      "category": "AI"
+    },
+    {
+      "name": "东方财富 7x24",
+      "type": "eastmoney",
+      "url": "",
+      "enabled": true,
+      "id": "7x24_4e0c67cd",
+      "category": "宏观"
+    },
+    {
+      "name": "新浪 7x24",
+      "type": "sina_fast",
+      "url": "",
+      "enabled": true,
+      "id": "7x24_0b528a99",
+      "category": "宏观"
+    },
+    {
+      "name": "X（谷歌镜像）",
+      "type": "x_mirror",
+      "url": "",
+      "enabled": true,
+      "id": "x_4204b1cd",
+      "category": "热点"
+    },
+    {
+      "name": "X（官方API·付费）",
+      "type": "x",
+      "url": "",
+      "enabled": false,
+      "note": "可选备用：需要环境变量 X_BEARER_TOKEN，X API 按量付费（读取也计费）。日常用上面的谷歌镜像即可",
+      "id": "x_api_881d165b",
+      "category": "热点"
+    },
+    {
+      "name": "Binance 公告",
+      "type": "binance_ann",
+      "url": "",
+      "enabled": false,
+      "note": "按需求暂不使用",
+      "id": "binance_2fa2aa67",
+      "category": "币圈"
+    },
+    {
+      "name": "东方财富7x24",
+      "type": "eastmoney",
+      "url": "",
+      "category": "宏观",
+      "enabled": true,
+      "id": "7x24_54702514"
+    },
+    {
+      "name": "新浪财经直播",
+      "type": "sina_fast",
+      "url": "",
+      "category": "宏观",
+      "enabled": true,
+      "id": "src_e5b04c4d"
+    },
+    {
+      "id": "bbc_world",
+      "name": "BBC 国际新闻",
+      "type": "rss",
+      "category": "国际",
+      "url": "http://feeds.bbci.co.uk/news/world/rss.xml",
+      "enabled": true
+    }
+  ]
+}
