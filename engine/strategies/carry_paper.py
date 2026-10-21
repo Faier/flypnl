@@ -18,6 +18,14 @@
 
 出场规则沿用 arb_sim P2 的语义：跟踪 7 次结算年化均值 < 5% 离场、持有
 >45 天强制离场、费率连续 2 次观测为负立即离场。
+进场三道门（2026-10-21 P0 实盘前优化）：
+  a) 净盈利门（Hummingbot profitability-after-fees 思路）：进场 APR 摊平
+     开+平全部成本（两腿手续费×2 + 过桥费）的回本期 >7 天 → 不吃。
+  b) maker 两段式进场：先挂盘口内侧限价（过桥费≈0），两腿 mid 都穿越
+     限价才成交（paper 保守判定，双腿齐备）；30 分钟过期后，仅当 taker
+     回本期也过门才降级市价吃单。出场永远 taker——纪律的及时性优先。
+  c) 结算网格对齐：结算锚 UTC 整点网格（修复旧 bug：进场后第一次真实
+     结算曾被漏记、整本账延后一个周期）。
 毕业门径：≥3 个已平仓组合的实现APR ≥ 进场APR的一半且无保证金告警，
 才允许 50U 真金白银的最小实腿。
 用法：python3 strategies/carry_paper.py [--once]
@@ -48,6 +56,17 @@ NEG_FLIPS_EXIT = 2        # 费率连续 2 次观测为负 -> 离场
 PROBE_USD = LEG_USD       # 试单深度按真实腿大小走
 MARGIN_WARN = 1.25        # 价格涨过进场价 25% -> 保证金告警（强平约 50%）
 ENTRY_COST_MAX = 0.005    # 两腿过桥费 >0.5% 不吃
+# ---- P0 优化（2026-10-21，实盘前三项）----
+# 1) 净盈利门（Hummingbot profitability-after-fees 思路）：进场 APR摊不平
+#    开+平全部成本的不吃。回本期 = 成本/日收益，门 = 7 天。
+# 2) maker 两段式进场：先挂盘口内侧限价（过桥费≈0），mid 穿越才成交；
+#    过期且 taker 回本期过关才降级 taker 立即吃。出场永远 taker（纪律>成本）。
+# 3) 结算网格对齐：结算时刻是 UTC 整点网格，记账锚到绝对网格而不是
+#    "进场时刻+interval"——旧写法把进场后第一次真实结算漏掉、整体延后
+#    一个周期（少记一桶费率）。
+BE_MAX_DAYS = 7.0         # 回本期门：摊平全部成本 >7 天 → 不吃
+MAKER_TTL_S = 2 * SCAN_S  # 挂单有效期（2 个扫描周期 = 30 分钟）
+MAKER_INSIDE = 0.3        # 挂价深入价差的位置（0.3 = 内侧 30% 处）
 
 GATE_SPOT = "https://api.gateio.ws/api/v4/spot"
 GATE_FUT = "https://api.gateio.ws/api/v4/futures/usdt"
@@ -132,10 +151,56 @@ def probe_legs(venue: str, base: str) -> dict | None:
         cost = (s_ask / s_mid - 1.0) + (1.0 - f_bid / f_mid)
         if cost > ENTRY_COST_MAX:
             return None                      # 过桥费太贵，漏洞被成本吃掉
+        s_limit, f_limit = maker_limits(s_book, f_book)
         return {"spot_px": s_ask, "fut_px": f_bid, "spot_mid": s_mid,
-                "fut_mid": f_mid, "entry_cost": cost}
+                "fut_mid": f_mid, "entry_cost": cost,
+                "spot_limit": s_limit, "fut_limit": f_limit}
     except Exception:
         return None
+
+
+# ------------------------------------------------------------- P0 纯函数
+def round_trip_cost(venue: str, entry_cost: float, maker: bool = False) -> float:
+    """开+平全周期成本（占名义比例）：两腿手续费 + 过桥费。
+
+    maker 档保守假设手续费与 taker 相同（Gate 现货标准档 maker=taker），
+    maker 的真实优势在过桥费≈0（挂内侧成交，不付冲击成本）；期货 maker
+    实际更低，上实盘前按账户实际费率改这里。"""
+    v = VENUES[venue]
+    fees = v["fee_spot"] + v["fee_fut"]
+    return entry_cost + 2.0 * fees
+
+
+def break_even_days(entry_apr: float, cost_frac: float) -> float:
+    """回本期（天）：全部成本 ÷ 进场 APR 的日化。APR≤0 → 永不回本。"""
+    daily = entry_apr / 365.0
+    return cost_frac / daily if daily > 0 else float("inf")
+
+
+def next_settle_ts(now: int, interval_s: int) -> int:
+    """下一结算时刻。结算锚在 UTC 整点网格（epoch 0 = 00:00 UTC，
+    4h/8h 桶都整除），与进场时刻无关。"""
+    return ((now // interval_s) + 1) * interval_s
+
+
+def maker_limits(spot_book: dict, fut_book: dict) -> tuple:
+    """两腿 maker 限价：挂在各自盘口价差内侧 30% 处——
+    现货买入限价（bid 上方）、永续卖出限价（ask 下方）。"""
+    s_a, _ = _top(spot_book, "asks")
+    s_b, _ = _top(spot_book, "bids")
+    f_a, _ = _top(fut_book, "asks")
+    f_b, _ = _top(fut_book, "bids")
+    spot_limit = s_b + (s_a - s_b) * MAKER_INSIDE
+    fut_limit = f_a - (f_a - f_b) * MAKER_INSIDE
+    return spot_limit, fut_limit
+
+
+def maker_crossed(spot_mid: float, fut_mid: float,
+                  spot_limit: float, fut_limit: float) -> bool:
+    """两腿 mid 都穿越限价才算 maker 成交（paper 保守判定：两条腿必须
+    同轮齐备——真实世界里单腿成交是腿风险，宁可少记）。"""
+    return (spot_mid > 0 and fut_mid > 0
+            and spot_mid <= spot_limit and fut_mid >= fut_limit)
 
 
 # ----------------------------------------------------------------- 行情拉取
@@ -242,24 +307,35 @@ def candidates(rows: list, pers: dict, spot_universes: dict) -> list:
     return out
 
 
-def open_position(venue: str, r: dict, p: dict, now: int) -> dict | None:
-    probe = probe_legs(venue, r["base"])
-    if probe is None:
-        return None                     # 深度不足 / 过桥费 >0.5%：不吃
+def open_position(venue: str, r: dict, p: dict, now: int,
+                  probe: dict, mode: str = "taker") -> dict:
+    """开仓登记。probe 由调用方探明后注入（maker 模式成交价=挂价、
+    过桥费记 0；taker 模式=吃深度的实价实费）。结算锚对齐 UTC 网格：
+    last_settle = 下一结算时刻，进场后第一次真实结算不再漏记。"""
     v = VENUES[venue]
     interval_h = float(r["interval_h"]) or 8.0
+    interval_s = int(interval_h * 3600)
+    if mode == "maker":
+        spot_px, fut_px, cost = probe["spot_limit"], probe["fut_limit"], 0.0
+    else:
+        spot_px, fut_px, cost = probe["spot_px"], probe["fut_px"], probe["entry_cost"]
+    be = break_even_days(r["funding_ann"],
+                         round_trip_cost(venue, cost, maker=(mode == "maker")))
     return {"opened": now, "venue": venue, "base": r["base"],
             "contract": v["fut_sym"](r["base"]),
             "spot_sym": v["spot_sym"](r["base"]),
             "fut_sym": v["fut_sym"](r["base"]),
             "notional": LEG_USD, "leverage": LEVERAGE,
-            "spot_entry": probe["spot_px"], "fut_entry": probe["fut_px"],
-            "entry_cost": round(probe["entry_cost"], 6),
+            "spot_entry": spot_px, "fut_entry": fut_px,
+            "entry_cost": round(cost, 6),
+            "entry_mode": mode, "be_days_entry": round(be, 1),
             "interval_h": interval_h,
             "apr_entry": round(r["funding_ann"], 4),
             "apr_obs_mean": round(p.get("mean", 0), 4),
             "funding_received": 0.0, "settlements": 0, "neg_flips": 0,
-            "last_settle": now + int(interval_h * 3600),
+            # 锚到绝对结算网格（P0-3：旧写法 now+interval 会漏掉进场后
+            # 第一次真实结算，整本账延后一个周期）
+            "last_settle": next_settle_ts(now, interval_s),
             "max_px_rise": 1.0, "trailing": [r["funding_ann"]]}
 
 
@@ -380,9 +456,13 @@ def cycle() -> dict:
 
     events = []
     held = st["positions"]
-    # ---- 盯市 + 出场检查（按所分组取行情） ----
+    pending = st.get("pending") or {}
+    st["pending"] = pending
+    skip_seen = st.get("skip_seen") or {}
+    st["skip_seen"] = skip_seen
+    # ---- 盯市 + 出场检查（按所分组取行情；挂单中的腿也要行情判穿越） ----
     by_venue = {}
-    for p in held.values():
+    for p in list(held.values()) + list(pending.values()):
         by_venue.setdefault(p["venue"], []).append(p)
     marks = {}
     for venue, ps in by_venue.items():
@@ -403,28 +483,99 @@ def cycle() -> dict:
             del held[key]
             events.append({"ts": now, "event": "close", **closed})
             append_jsonl("carry.jsonl", {"ts": now, "event": "close", **closed})
-    # ---- 开仓（有空位才开；同所同币不重复） ----
+
+    def _open(venue, r, p, probe, mode):
+        pos = open_position(venue, r, p, now, probe, mode=mode)
+        key = f"{venue}:{r['contract']}"
+        held[key] = pos
+        ev = {"ts": now, "event": "open", "venue": venue,
+              "base": r["base"], "contract": pos["contract"],
+              "apr_entry": pos["apr_entry"], "entry_cost": pos["entry_cost"],
+              "mode": mode, "be_days": pos["be_days_entry"]}
+        events.append(ev)
+        append_jsonl("carry.jsonl", ev)
+
+    # ---- 开仓：P0 两段式（maker 优先 → 穿越成交；过期且 taker 过净盈利门
+    #      才降级吃单。出场侧永远 taker：纪律的及时性优先于成本） ----
     if len(held) < MAX_POSITIONS:
         spot_universes = {}
         for venue in VENUES:
             if any(r["exchange"] == venue for r in rows):
                 spot_universes[venue] = spot_universe(venue)
+        cands = {}
         for venue, r, p in candidates(rows, pers, spot_universes):
-            key = f"{venue}:{r['contract']}"
+            cands[f"{venue}:{r['contract']}"] = (venue, r, p)
+        # 1) 在挂的 maker 单：费率塌了取消；mid 穿越限价成交；过期降级/放弃
+        for key in list(pending):
             if key in held or len(held) >= MAX_POSITIONS:
+                pending.pop(key)
                 continue
-            pos = open_position(venue, r, p, now)
-            if pos:
-                held[key] = pos
-                events.append({"ts": now, "event": "open", "venue": venue,
-                               "base": r["base"], "contract": pos["contract"],
-                               "apr_entry": pos["apr_entry"],
-                               "entry_cost": pos["entry_cost"]})
-                append_jsonl("carry.jsonl", {"ts": now, "event": "open",
-                                             "venue": venue, "base": r["base"],
-                                             "contract": pos["contract"],
-                                             "apr_entry": pos["apr_entry"],
-                                             "entry_cost": pos["entry_cost"]})
+            pend = pending[key]
+            row = cands.get(key)
+            if row is None:
+                pending.pop(key)
+                events.append({"ts": now, "event": "maker_cancel", "key": key,
+                               "why": "rate decayed below gate"})
+                continue
+            venue, r, p = row
+            if now >= pend["expires"]:
+                probe = probe_legs(venue, r["base"])
+                if probe is not None:
+                    be_t = break_even_days(
+                        r["funding_ann"], round_trip_cost(venue, probe["entry_cost"]))
+                    if be_t <= BE_MAX_DAYS:
+                        pending.pop(key)
+                        _open(venue, r, p, probe, "taker")
+                        continue
+                pending.pop(key)
+                events.append({"ts": now, "event": "maker_expired",
+                               "key": key})
+                continue
+            ft, sm = marks.get(venue, ({}, {}))
+            spot_mid = float((sm.get(pend["spot_sym"]) or {}).get("last") or 0)
+            fut_mid = float((ft.get(pend["fut_sym"]) or {}).get("mark_price") or 0)
+            if maker_crossed(spot_mid, fut_mid,
+                             pend["spot_limit"], pend["fut_limit"]):
+                fill = {"spot_limit": pend["spot_limit"],
+                        "fut_limit": pend["fut_limit"]}
+                pending.pop(key)
+                _open(venue, r, p, fill, "maker")
+        # 2) 新候选：净盈利门（maker 和 taker 回本期都 >BE_MAX → 不碰），
+        #    过门先挂 maker（省过桥费），jsonl 每 6h 记一次被拒样本防刷屏
+        for key, (venue, r, p) in cands.items():
+            if key in held or key in pending or len(held) >= MAX_POSITIONS:
+                continue
+            probe = probe_legs(venue, r["base"])
+            if probe is None:
+                continue
+            be_t = break_even_days(
+                r["funding_ann"], round_trip_cost(venue, probe["entry_cost"]))
+            be_m = break_even_days(
+                r["funding_ann"], round_trip_cost(venue, 0.0, maker=True))
+            if min(be_t, be_m) > BE_MAX_DAYS:
+                if now - skip_seen.get(key, 0) > 6 * 3600:
+                    skip_seen[key] = now
+                    ev = {"ts": now, "event": "skip_unprofitable", "key": key,
+                          "apr": round(r["funding_ann"], 4),
+                          "be_days_taker": round(be_t, 1),
+                          "be_days_maker": round(be_m, 1)}
+                    events.append(ev)
+                    append_jsonl("carry.jsonl", ev)
+                continue
+            v = VENUES[venue]
+            pending[key] = {"ts": now, "expires": now + MAKER_TTL_S,
+                            "venue": venue, "base": r["base"],
+                            "spot_sym": v["spot_sym"](r["base"]),
+                            "fut_sym": v["fut_sym"](r["base"]),
+                            "spot_limit": probe["spot_limit"],
+                            "fut_limit": probe["fut_limit"]}
+            ev = {"ts": now, "event": "maker_quote", "key": key,
+                  "base": r["base"], "venue": venue,
+                  "apr": round(r["funding_ann"], 4),
+                  "be_days_maker": round(be_m, 1),
+                  "be_days_taker": round(be_t, 1)}
+            events.append(ev)
+            append_jsonl("carry.jsonl", ev)
     st["positions"] = held
     write_state("carry_state.json", st)
     return {"ts": now, "state": st, "events": events, "n_rows": len(rows),
@@ -444,13 +595,15 @@ def md_report(res: dict) -> str:
     lines += ["## 在场组合", ""]
     if not st["positions"]:
         lines.append("（无）")
-    lines.append("| 所 | 合约 | 进场APR | 实测APR | 已收资金 | 结算 | 翻负 | 最大涨幅 | 腿盈亏 | 过桥费 |")
-    lines.append("|---|---|---|---|---|---|---|---|---|---|")
+    lines.append("| 所 | 合约 | 进场APR | 实测APR | 模式 | 回本期 | 已收资金 | 结算 | 翻负 | 最大涨幅 | 腿盈亏 | 过桥费 |")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|")
     for key, p in st["positions"].items():
         legs = p.get("pnl_legs", {})
         lines.append(f"| {p['venue']} | {p['contract']} "
                      f"| {fmt_pct(p['apr_entry'])} "
                      f"| {fmt_pct(p.get('mark', {}).get('rate_ann'))} "
+                     f"| {p.get('entry_mode', 'taker')} "
+                     f"| {p.get('be_days_entry', '?')}天 "
                      f"| {p['funding_received']:.4f} | {p['settlements']} "
                      f"| {p['neg_flips']} | {p['max_px_rise']:.2f}x "
                      f"| {legs.get('spot', 0):+.2f}/{legs.get('fut', 0):+.2f} "

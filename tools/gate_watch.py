@@ -158,9 +158,12 @@ def main() -> None:
     trail_s = f"{trail*100:+.1f}%" if trail == trail else "样本不足"
     cur_ann = rate * (24 / interval_h) * 365
     pos = st["position"]
+    nxt = ((int(time.time()) // int(interval_h * 3600)) + 1) * int(interval_h * 3600)
     lines = [f"[gate_watch] {a.contract} @ {time.strftime('%m-%d %H:%M')}",
              f"  现费率: {rate*100:+.4f}/桶 → 年化 {cur_ann*100:+.1f}%",
-             f"  trailing{TRAIL}: {trail_s}（历史 {len(st['history'])} 桶，可用 {have}）"]
+             f"  trailing{TRAIL}: {trail_s}（历史 {len(st['history'])} 桶，可用 {have}）",
+             f"  下一结算: {time.strftime('%m-%d %H:%M', time.localtime(nxt))}"
+             f"（{(nxt - time.time()) / 3600:.1f}h 后；结算刚过进场吃满整段）"]
 
     verdict = "观望：门未开"
     if pos is None:
