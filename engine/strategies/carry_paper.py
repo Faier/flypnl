@@ -26,6 +26,11 @@
      回本期也过门才降级市价吃单。出场永远 taker——纪律的及时性优先。
   c) 结算网格对齐：结算锚 UTC 整点网格（修复旧 bug：进场后第一次真实
      结算曾被漏记、整本账延后一个周期）。
+P1（实盘第一个月加，2026-10-21）：
+  4) 跨所比价进场：同币多所过门 → 只留持续性均值最高的执行所。
+  5) 基差/保证金监控：基差逐轮记录极端值；空腿浮亏 +25% 报警再平衡
+     （补保证金或减半现货腿），+30% 维持撤退线。
+  6) 候选分散：最多 2 仓、同币跨所单仓、腿名义 40U 对齐 pilot。
 毕业门径：≥3 个已平仓组合的实现APR ≥ 进场APR的一半且无保证金告警，
 才允许 50U 真金白银的最小实腿。
 用法：python3 strategies/carry_paper.py [--once]
@@ -42,9 +47,10 @@ from common import (append_jsonl, fmt_pct, fmt_ts, http_json, read_jsonl_tail,
 from funding_radar import ann_funding, fetch_bybit, fetch_gate, fetch_okx
 
 SCAN_S = 15 * 60
-LEG_USD = 50.0            # 每条腿的纸面名义（既真实又亏不心疼）
+LEG_USD = 40.0            # 每条腿的纸面名义（对齐实盘 pilot 的 40U 现货腿）
 LEVERAGE = 2.0            # 空腿保证金模拟倍数（2x -> 强平约 +50%）
-MAX_POSITIONS = 3
+MAX_POSITIONS = 2         # P1-6 候选分散：同时最多 2 个组合（原 3）
+MAX_BASES = 2             # 同币跨所也只能有一仓（防同一风险敞口 ×2）
 MIN_VOL = 3_000_000
 APR_MIN_MEAN = 0.30       # 持续性门槛：观测均值 ≥ 30%（比雷达展示的 15% 更挑）
 APR_MIN_LAST = 0.15       # 且当前值 ≥ 15%
@@ -67,6 +73,13 @@ ENTRY_COST_MAX = 0.005    # 两腿过桥费 >0.5% 不吃
 BE_MAX_DAYS = 7.0         # 回本期门：摊平全部成本 >7 天 → 不吃
 MAKER_TTL_S = 2 * SCAN_S  # 挂单有效期（2 个扫描周期 = 30 分钟）
 MAKER_INSIDE = 0.3        # 挂价深入价差的位置（0.3 = 内侧 30% 处）
+# ---- P1 优化（2026-10-21，实盘第一个月加）----
+# 4) 跨所比价进场（aoki-hjp/funding-rate-arbitrage 思路）：同币在多个执行所
+#    都过门时，只留持续性观测均值最高的所——瞬时肥的挤兑所自动被淘汰。
+# 5) 基差/保证金监控：delta 中性下基差（fut mark − spot last）是两腿外的
+#    第三敞口，逐轮记录极端值；空腿浮亏 +25% 发再平衡报警（补保证金或
+#    减半现货腿），+30% 仍是撤退线（should_exit 原样）。
+# 6) 候选分散：最多 2 仓、同币任何所只允许一仓、腿名义对齐 40U pilot。
 
 GATE_SPOT = "https://api.gateio.ws/api/v4/spot"
 GATE_FUT = "https://api.gateio.ws/api/v4/futures/usdt"
@@ -201,6 +214,43 @@ def maker_crossed(spot_mid: float, fut_mid: float,
     同轮齐备——真实世界里单腿成交是腿风险，宁可少记）。"""
     return (spot_mid > 0 and fut_mid > 0
             and spot_mid <= spot_limit and fut_mid >= fut_limit)
+
+
+def pick_best_venue(cands: dict) -> tuple:
+    """跨所比价进场：同币在多个执行所过门时只留一个。
+
+    选持续性观测均值（pers.mean，非瞬时值）最高的所；瞬时费率尖峰的
+    挤兑所过得了瞬时门但均值低，自动淘汰。返回 (保留的 cands, 淘汰记录)。"""
+    by_base = {}
+    for key, (venue, r, p) in cands.items():
+        by_base.setdefault(r["base"], []).append((key, venue, r, p))
+    kept, drops = {}, []
+    for base, lst in by_base.items():
+        lst.sort(key=lambda t: t[3].get("mean", 0.0), reverse=True)
+        k0, v0, r0, p0 = lst[0]
+        kept[k0] = (v0, r0, p0)
+        for key, venue, r, p in lst[1:]:
+            drops.append({"base": base, "dropped": key, "kept": k0,
+                          "mean_dropped": round(p.get("mean", 0.0), 4),
+                          "mean_kept": round(p0.get("mean", 0.0), 4)})
+    return kept, drops
+
+
+def base_in_use(held: dict, pending: dict, base: str) -> bool:
+    """同币单仓：该币已持仓或挂单中（任何所）→ 不再开第二仓。"""
+    return (any(p.get("base") == base for p in held.values())
+            or any(p.get("base") == base for p in pending.values()))
+
+
+def basis_pct(spot: float, fut_mark: float) -> float:
+    """基差 = (永续标记价 − 现货价) / 现货价。delta 中性下这是两腿之外
+    的第三敞口：进场时锁定的基差在平仓前可以漂移。"""
+    return (fut_mark - spot) / spot if spot > 0 else 0.0
+
+
+def fut_short_loss_frac(entry: float, mark: float) -> float:
+    """空腿浮亏占名义比例（价格上涨为正；下跌腿浮盈不报警）。"""
+    return max(0.0, mark / entry - 1.0) if entry > 0 else 0.0
 
 
 # ----------------------------------------------------------------- 行情拉取
@@ -360,6 +410,21 @@ def settle_and_mark(pos: dict, fut_t: dict | None, spot_t: dict | None,
         pos["neg_flips"] = 0
     pos["mark"] = {"spot": spx, "fut": fpx, "rate_ann": round(
         ann_funding(rate_now, pos["interval_h"]), 4)}
+    # P1-5: 基差监控（两腿外的第三敞口）——逐轮记录，极端值入档
+    if spx > 0 and fpx > 0:
+        b = basis_pct(spx, fpx)
+        pos["basis_now"] = round(b, 5)
+        pos["basis_open"] = pos.get("basis_open",
+                                    round(basis_pct(pos["spot_entry"],
+                                                    pos["fut_entry"]), 5))
+        pos["max_basis_pct"] = round(max(abs(pos.get("max_basis_pct", 0.0)),
+                                         abs(b)), 5)
+    # P1-5: 空腿浮亏 ≥25% → 再平衡报警（一次即够，cycle 侧发事件）；
+    # ≥30% 仍是撤退线（should_exit 原样，纪律优先）
+    if fut_short_loss_frac(pos["fut_entry"], fpx) >= MARGIN_WARN - 1.0 \
+            and not pos.get("margin_alerted"):
+        pos["margin_alerted"] = True
+        pos["_new_margin_alert"] = round(fut_short_loss_frac(pos["fut_entry"], fpx), 4)
     # 空腿盈亏 = (entry - mark) * size；现货腿 = (mark - entry) * size —— 互相抵消
     size_f = pos["notional"] / pos["fut_entry"]
     size_s = pos["notional"] / pos["spot_entry"]
@@ -474,6 +539,14 @@ def cycle() -> dict:
         ft, sm = marks.get(pos["venue"], ({}, {}))
         pos = settle_and_mark(pos, ft.get(pos["fut_sym"]),
                               sm.get(pos["spot_sym"]), now)
+        if "_new_margin_alert" in pos:
+            adverse = pos.pop("_new_margin_alert")
+            ev = {"ts": now, "event": "rebalance_alert", "key": key,
+                  "adverse_move": adverse,
+                  "basis_now": pos.get("basis_now"),
+                  "advice": "补空腿保证金或减半现货腿（30% 仍是撤退线）"}
+            events.append(ev)
+            append_jsonl("carry.jsonl", ev)
         why = should_exit(pos)
         if why:
             pos["exit_reason"] = why
@@ -505,6 +578,10 @@ def cycle() -> dict:
         cands = {}
         for venue, r, p in candidates(rows, pers, spot_universes):
             cands[f"{venue}:{r['contract']}"] = (venue, r, p)
+        # P1-4 跨所比价：同币只留持续性均值最高的执行所
+        cands, venue_drops = pick_best_venue(cands)
+        for d in venue_drops:
+            events.append({"ts": now, "event": "venue_rank", **d})
         # 1) 在挂的 maker 单：费率塌了取消；mid 穿越限价成交；过期降级/放弃
         for key in list(pending):
             if key in held or len(held) >= MAX_POSITIONS:
@@ -544,6 +621,9 @@ def cycle() -> dict:
         #    过门先挂 maker（省过桥费），jsonl 每 6h 记一次被拒样本防刷屏
         for key, (venue, r, p) in cands.items():
             if key in held or key in pending or len(held) >= MAX_POSITIONS:
+                continue
+            # P1-6 候选分散：同币任何所已持仓/挂单 → 不开第二仓
+            if base_in_use(held, pending, r["base"]):
                 continue
             probe = probe_legs(venue, r["base"])
             if probe is None:
@@ -595,17 +675,22 @@ def md_report(res: dict) -> str:
     lines += ["## 在场组合", ""]
     if not st["positions"]:
         lines.append("（无）")
-    lines.append("| 所 | 合约 | 进场APR | 实测APR | 模式 | 回本期 | 已收资金 | 结算 | 翻负 | 最大涨幅 | 腿盈亏 | 过桥费 |")
-    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|")
+    lines.append("| 所 | 合约 | 进场APR | 实测APR | 模式 | 回本期 | 已收资金 | 结算 | 翻负 | 基差(开/现/极) | 空腿浮亏 | 最大涨幅 | 腿盈亏 | 过桥费 |")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for key, p in st["positions"].items():
         legs = p.get("pnl_legs", {})
+        loss = fut_short_loss_frac(p["fut_entry"],
+                                   (p.get("mark") or {}).get("fut", 0.0))
         lines.append(f"| {p['venue']} | {p['contract']} "
                      f"| {fmt_pct(p['apr_entry'])} "
                      f"| {fmt_pct(p.get('mark', {}).get('rate_ann'))} "
                      f"| {p.get('entry_mode', 'taker')} "
                      f"| {p.get('be_days_entry', '?')}天 "
                      f"| {p['funding_received']:.4f} | {p['settlements']} "
-                     f"| {p['neg_flips']} | {p['max_px_rise']:.2f}x "
+                     f"| {p['neg_flips']} "
+                     f"| {fmt_pct(p.get('basis_open'))}/{fmt_pct(p.get('basis_now'))}/{fmt_pct(p.get('max_basis_pct'))} "
+                     f"| {fmt_pct(loss)}{(' ⚠️' if p.get('margin_alerted') else '')} "
+                     f"| {p['max_px_rise']:.2f}x "
                      f"| {legs.get('spot', 0):+.2f}/{legs.get('fut', 0):+.2f} "
                      f"| {fmt_pct(p['entry_cost'])} |")
     lines.append("")
