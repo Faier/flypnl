@@ -57,6 +57,28 @@ python3 -m flygate live
 ```
 每对独立大脑、独立预算（默认100 USDT/对）、独立状态文件（可断点恢复）。
 
+不改配置文件、临时换币，用命令行参数（现货 + 合约都行）：
+```bash
+python3 -m flygate paper --pairs BTC_USDT,DOGE_USDT          # 本次只跑这两对现货
+python3 -m flygate live  --contract ZEC_USDT                 # 本次合约跑 ZEC（自动启用合约腿）
+python3 -m flygate paper --no-futures                        # 本次关掉合约腿
+```
+币种优先级：命令行 > `config.json` 的 `pairs`/`futures.contract`。新对的预算
+取 `budgets`，没有则用 `quote_budget` 默认值。
+
+## 订单流水（`runs/orders.jsonl`，重启不丢）
+
+每笔**确认成交**追加一行（现货+合约、paper+live 全在里面；回测不写）。
+之前 paper 重启会丢成交记录、live 依赖交易所查询上限——现在这是唯一权威流水：
+```bash
+python3 -m flygate orders                       # 最近 50 笔
+python3 -m flygate orders --pair FUT:ZEC_USDT --last 100
+python3 -m flygate orders --mode fut-live       # 只看真金白银的合约单
+```
+仪表盘新增「📋 订单流水（全量逐笔）」表，接口 `GET /api/orders?pair=&mode=&limit=`。
+每行字段：`seq/time/pair/side/price/base/quote/fee/reason/mode`，`seq` 跨重启连续。
+每日战报（`/api/daily`）的币种与预算现在跟随 `config.json`，不再是硬编码清单。
+
 ## 新币雷达（`python -m flygate radar`，仪表盘 `/radar`）
 
 **只做新币**：每 15 秒扫描各链**可验证上线时间且 ≤6 小时**的新代币（成熟币和无法验证币龄的直接跳过），

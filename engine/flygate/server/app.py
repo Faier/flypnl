@@ -217,6 +217,22 @@ class Dashboard:
                 elif self.path == "/api/daily":
                     from ..analytics import get_daily_summary
                     self._send(200, json.dumps(get_daily_summary(dash.runs_dir)).encode())
+                elif self.path.startswith("/api/orders"):
+                    import urllib.parse
+                    parsed = urllib.parse.urlparse(self.path)
+                    params = urllib.parse.parse_qs(parsed.query)
+                    from ..orders import read_orders
+                    try:
+                        limit = int(params.get("limit", ["200"])[0] or 200)
+                    except ValueError:
+                        limit = 200
+                    rows = read_orders(dash.runs_dir,
+                                       pair=params.get("pair", [None])[0],
+                                       mode=params.get("mode", [None])[0],
+                                       limit=min(limit, 2000))
+                    self._send(200, json.dumps(
+                        {"orders": rows, "count": len(rows)},
+                        ensure_ascii=False).encode())
                 elif self.path.startswith("/api/radar/feed"):
                     import urllib.parse
                     parsed = urllib.parse.urlparse(self.path)

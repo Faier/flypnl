@@ -40,6 +40,9 @@ class Broker:
         self.pos = Position()
         self.trades: list[Trade] = []
         self.risk = risk
+        # OrdersLedger, wired by the engine (never in backtests): every
+        # confirmed fill also lands in runs/orders.jsonl
+        self.ledger = None
         # set when an order's outcome could not be confirmed against the
         # exchange: the local view is then unknown and must not be traded on
         self.needs_reconcile = False
@@ -74,6 +77,8 @@ class PaperBroker(Broker):
         self.pos.cost += notional
         t = Trade(time.time(), self.pair, "BUY", px, base, notional, fee, reason, "paper")
         self.trades.append(t)
+        if self.ledger is not None:
+            self.ledger.record(t)
         return t
 
     def sell(self, price: float, reason: str = "", frac: float | None = None) -> Trade | None:
@@ -95,6 +100,8 @@ class PaperBroker(Broker):
             self.pos.base = 0.0
             self.pos.cost = 0.0
         self.trades.append(t)
+        if self.ledger is not None:
+            self.ledger.record(t)
         return t
 
     # -- persistence -----------------------------------------------------
@@ -202,6 +209,8 @@ class GateBroker(Broker):
         t = Trade(time.time(), self.pair, "BUY", px, base_net, quote_spent,
                   fee_quote, reason, "live")
         self.trades.append(t)
+        if self.ledger is not None:
+            self.ledger.record(t)
         return t
 
     def sell(self, price: float, reason: str = "", frac: float | None = None) -> Trade | None:
@@ -228,6 +237,8 @@ class GateBroker(Broker):
         self.pos.base = max(0.0, self.pos.base - base_sold)   # dust may remain
         self.pos.cost = 0.0 if self.pos.base <= 0 else self.pos.cost * max(0.0, 1 - base_sold / (base_sold + self.pos.base))
         self.trades.append(t)
+        if self.ledger is not None:
+            self.ledger.record(t)
         return t
 
     # -- reconciliation ----------------------------------------------------

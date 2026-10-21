@@ -57,6 +57,9 @@ class FuturesBroker:
         self.size = 0                 # signed contracts held
         self.entry = 0.0              # avg entry price
         self.trades: list[Trade] = []
+        # OrdersLedger, wired by FuturesRunner (never in backtests): every
+        # confirmed fill also lands in runs/orders.jsonl
+        self.ledger = None
         self.leverage = max(1, int(leverage))   # the ONLY leverage we may hold
         self.guard_dist = float(guard_dist)     # StopGuard trigger distance
         self._leverage_ok = False     # leverage set AND read back AND checked
@@ -302,6 +305,8 @@ class FuturesBroker:
                       abs(size) * self.quanto, notional, fee, reason,
                       "fut-paper" if self.paper else "fut-live")
             self.trades.append(t)
+            if self.ledger is not None:
+                self.ledger.record(t)
             return t
         # ---- live: net-mode market order, then sync from the exchange
         # (position endpoint is the authority for size AND entry price).
@@ -367,6 +372,8 @@ class FuturesBroker:
                   abs(filled) * self.quanto, abs(filled) * self.quanto * px,
                   abs(filled) * self.quanto * px * self.fee, reason, "fut-live")
         self.trades.append(t)
+        if self.ledger is not None:
+            self.ledger.record(t)
         return t
 
     def _my_position(self) -> dict | None:

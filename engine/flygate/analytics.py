@@ -95,14 +95,25 @@ def get_daily_summary(runs_dir: str) -> list[dict]:
 
     results = []
     # Base allocations
-    default_allocs = {
-        "BTC_USDT": 100.0,
-        "ETH_USDT": 100.0,
-        "SOL_USDT": 100.0,
-        "PONS_USDT": 40.0,
-        "DOGE_USDT": 100.0,
-        "XRP_USDT": 100.0,
-    }
+    # Allocations follow the LIVE config (self-selected pairs), not a
+    # hardcoded board: a pair added via config or --pairs must show up in
+    # the daily report with its real budget without a code change.
+    cfg_path = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "config.json")
+    cfg = {}
+    try:
+        with open(cfg_path, encoding="utf-8") as f:
+            cfg = json.load(f)
+    except Exception:
+        pass
+    budgets = cfg.get("budgets") or {}
+    _qb = float(cfg.get("quote_budget", 100.0) or 100.0)
+    default_allocs = {p: float(budgets.get(p, _qb))
+                      for p in (cfg.get("pairs")
+                                or ["BTC_USDT", "ETH_USDT", "SOL_USDT"])}
+    _fcfg = cfg.get("futures") or {}
+    fut_contract = str(_fcfg.get("contract", "ZEC_USDT"))
+    fut_budget = float(_fcfg.get("budget", 200.0) or 200.0)
 
     for idx, day in enumerate(all_days):
         day_events = events_by_day.get(day, [])
@@ -242,10 +253,10 @@ def get_daily_summary(runs_dir: str) -> list[dict]:
 
         # Futures summary
         fut_pnl = 0.0
-        fut_cash = 200.0
+        fut_cash = fut_budget
         if day == today_str and fut_state:
-            fut_cash = float(fut_state.get("cash", 200.0))
-            fut_pnl = round(fut_cash - float(fut_state.get("day_start_eq", 200.0)), 4)
+            fut_cash = float(fut_state.get("cash", fut_budget))
+            fut_pnl = round(fut_cash - float(fut_state.get("day_start_eq", fut_budget)), 4)
 
         results.append({
             "date": day,
@@ -258,8 +269,8 @@ def get_daily_summary(runs_dir: str) -> list[dict]:
             "da_reward": int(l_entry.get("da_reward", 0)),
             "da_punish": int(l_entry.get("da_punish", 0)),
             "futures": {
-                "contract": "ZEC_USDT",
-                "budget": 200.0,
+                "contract": fut_contract,
+                "budget": fut_budget,
                 "cash": round(fut_cash, 2),
                 "pnl": fut_pnl,
                 "events_count": len(fut_events)

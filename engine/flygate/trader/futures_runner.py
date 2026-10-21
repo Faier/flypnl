@@ -20,6 +20,7 @@ import numpy as np
 
 from ..brain.flybrain import FlyBrain, BUY, SELL
 from ..data.gate_client import GateError
+from ..orders import OrdersLedger
 from ..logs import Log
 from ..trader.entry_guards import EntryGuards
 from ..trader.exits import ExitManager, PersistRatchet
@@ -67,6 +68,7 @@ class FuturesRunner(threading.Thread):
                                     client, quanto, paper=self.paper,
                                     fee=float(fc.get("fee", 0.0005)),
                                     guard_dist=float(cfg.risk.atr_trail_max))
+        self.broker.ledger = OrdersLedger(runs_dir)
         self.guard = StopGuard(client, dist=float(cfg.risk.atr_trail_max))
         self.cap_contracts = max(1, int(fc.get("max_contracts", 2)))
         self.entry_step = max(1, int(fc.get("entry_step", 1)))

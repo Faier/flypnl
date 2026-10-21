@@ -18,6 +18,7 @@ import numpy as np
 
 from ..brain.flybrain import FlyBrain, BUY, SELL, HOLD
 from ..brain.circuits import LoomingDetector
+from ..orders import OrdersLedger
 from ..config import Config
 from ..data.gate_client import GateClient
 from ..data.history import INTERVALS
@@ -187,6 +188,9 @@ class Engine:
         self.risk.anchor_ready = not bool(self.cfg.futures.get("enable"))
         self.brokers = {}
         self.brains = {}
+        # durable per-fill ledger (spot + futures land in runs/orders.jsonl);
+        # shadow twins are NOT wired — a control arm must not pollute it
+        self._orders = OrdersLedger(self.runs)
         # open trips per pair: {"cash0": quote cash before the entry,
         # "entry_ts": candle ts of the entry fill} — the teaching basis
         self._trips: dict[str, dict] = {}
@@ -198,6 +202,7 @@ class Engine:
                 self.brokers[p] = GateBroker(p, budget, cfg.risk, self.client)
             else:
                 self.brokers[p] = PaperBroker(p, budget, cfg.risk)
+            self.brokers[p].ledger = self._orders
             brain = FlyBrain(cfg.brain, tag=p)
             # a truncated .npz must not stop the bot from starting; the brain
             # then simply re-converges from zero (its EMAs are decision state)

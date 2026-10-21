@@ -166,8 +166,33 @@ def main():
     p.add_argument("--shadow", action="store_true",
                    help="co-run a frozen twin fly on the same stream "
                         "(paper control arm for the trip-teaching loop)")
+    p.add_argument("--pairs", default=None,
+                   help="override spot pairs for this run, comma-separated "
+                        "(e.g. BTC_USDT,DOGE_USDT)")
+    p.add_argument("--contract", default=None,
+                   help="override futures contract (e.g. ZEC_USDT); "
+                        "enables futures if disabled in config")
+    p.add_argument("--no-futures", action="store_true",
+                   help="disable futures for this run")
     p = sub.add_parser("live")
     p.add_argument("--preflight-only", action="store_true")
+    p.add_argument("--pairs", default=None,
+                   help="override spot pairs for this run, comma-separated "
+                        "(e.g. BTC_USDT,DOGE_USDT)")
+    p.add_argument("--contract", default=None,
+                   help="override futures contract (e.g. ZEC_USDT); "
+                        "enables futures if disabled in config")
+    p.add_argument("--no-futures", action="store_true",
+                   help="disable futures for this run")
+
+    p = sub.add_parser("orders",
+                       help="durable per-fill ledger runs/orders.jsonl "
+                            "(spot+futures, paper+live, survives restarts)")
+    p.add_argument("--pair", default=None, help="exact pair, e.g. BTC_USDT / FUT:ZEC_USDT")
+    p.add_argument("--mode", default=None,
+                   help="filter: paper / live / fut-paper / fut-live")
+    p.add_argument("--last", type=int, default=50)
+
     p = sub.add_parser("logs")
     p.add_argument("--cat", default=None, help="filter: LIFE/TRADE/EXIT/RISK/ERR")
     p.add_argument("--level", default=None)
@@ -288,7 +313,30 @@ def main():
                            level=args.level, last=args.last):
             print(format_rec(r))
         return
+    if args.cmd == "orders":
+        from .orders import read_orders
+        rows = read_orders(default_runs_dir(), pair=args.pair,
+                           mode=args.mode, limit=args.last)
+        if not rows:
+            print("[orders] ledger empty (or nothing matches the filter)")
+        for r in rows:
+            print(f"#{r.get('seq', '?'):>5} {r.get('time', '')} "
+                  f"{r.get('mode', ''):<9} {r.get('pair', ''):<16} "
+                  f"{r.get('side', ''):<4} px={r.get('price', 0):<12g} "
+                  f"base={r.get('base', 0):<12g} quote={r.get('quote', 0):<10g} "
+                  f"fee={r.get('fee', 0):<8g} {r.get('reason', '')}")
+        return
     cfg = Config.load(args.config)
+    if args.cmd in ("paper", "live"):
+        # runtime coin selection: the CLI wins over config.json for this run
+        if getattr(args, "pairs", None):
+            cfg.pairs = [s.strip().upper() for s in args.pairs.split(",")
+                         if s.strip()]
+        if getattr(args, "contract", None):
+            cfg.futures["contract"] = args.contract.strip().upper()
+            cfg.futures["enable"] = True
+        if getattr(args, "no_futures", False):
+            cfg.futures["enable"] = False
     if args.cmd == "scan":
         from .scanner import run_scan
         run_scan(cfg, args)
