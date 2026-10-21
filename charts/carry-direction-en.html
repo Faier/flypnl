@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    background: linear-gradient(to bottom right, rgb(12, 125, 125), rgb(24, 33, 123));
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  .window {
+    width: 1040px; background: #1d2433; border-radius: 14px;
+    box-shadow: 0 30px 60px rgba(0,0,0,.45);
+    padding: 30px 40px 40px;
+  }
+  .bar { display: flex; align-items: center; gap: 9px; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+  .tag { margin-left: 14px; font: 600 17px/1 "SF Mono", Menlo, monospace; color: #7dd3c0; letter-spacing: 1px; }
+  .title { margin-top: 24px; font-size: 50px; font-weight: 900; line-height: 1.25; color: #fff; }
+  .rows { margin-top: 30px; display: flex; flex-direction: column; gap: 14px; }
+  .row {
+    display: flex; align-items: center; gap: 18px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px; padding: 18px 24px;
+  }
+  .row .k { font: 800 24px/1 "SF Mono", Menlo, monospace; letter-spacing: .5px; width: 300px; }
+  .row .v { font-size: 22px; color: #c9d2de; font-weight: 600; }
+  .row.g .k { color: #10b981; } .row.r .k { color: #f43f5e; } .row.y .k { color: #ffd166; }
+  .foot { margin-top: 26px; font-size: 27px; font-weight: 700; color: #c9d2de; }
+  .foot b { color: #ffd166; }
+  .source { margin-top: 20px; font-size: 16px; color: #6b7688; }
+</style>
+</head>
+<body>
+  <div class="window">
+    <div class="bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+      <span class="tag">flypnl · DIRECTION</span></div>
+    <div class="title">Funding carry: the no-prediction trade</div>
+    <div class="rows">
+      <div class="row g"><span class="k">LONG SPOT</span><span class="v">buy 40U of the coin</span></div>
+      <div class="row r"><span class="k">SHORT PERP</span><span class="v">sell 40U of the same coin</span></div>
+      <div class="row y"><span class="k">COLLECT FUNDING</span><span class="v">what leveraged longs pay, every 4h</span></div>
+    </div>
+    <div class="foot">Price moves cancel. <b>Discipline decides.</b></div>
+    <div class="source">github.com/Faier/flypnl · not financial advice</div>
+  </div>
+</body>
+</html>
