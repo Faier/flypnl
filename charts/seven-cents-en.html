@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    background: linear-gradient(to bottom right, rgb(12, 125, 125), rgb(24, 33, 123));
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  .window {
+    width: 1040px;
+    background: #1d2433; border-radius: 14px;
+    box-shadow: 0 30px 60px rgba(0,0,0,.45);
+    padding: 26px 34px 42px;
+  }
+  .bar { display: flex; align-items: center; gap: 9px; }
+  .dot { width: 15px; height: 15px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+  .tag {
+    margin-left: 14px; font: 600 17px/1 "SF Mono", Menlo, monospace;
+    color: #7dd3c0; letter-spacing: 1px;
+  }
+  .title {
+    margin-top: 28px; font-size: 52px; font-weight: 900; line-height: 1.3;
+    color: #ffffff; letter-spacing: .5px;
+  }
+  .stats { display: flex; align-items: flex-end; gap: 40px; margin: 30px 0 30px; }
+  .num { font-size: 84px; font-weight: 800; line-height: 1; }
+  .label { margin-top: 12px; font-size: 19px; color: #8b96a8; }
+  .body {
+    font-size: 30px; font-weight: 600; line-height: 1.65; color: #c9d2de;
+    letter-spacing: .5px;
+  }
+  .body b { color: #ffd166; font-weight: 800; }
+  .source { margin-top: 24px; font-size: 16px; color: #6b7688; letter-spacing: .5px; }
+</style>
+</head>
+<body>
+  <div class="window">
+    <div class="bar">
+      <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+      <span class="tag">flypnl · DAY 3</span>
+    </div>
+    <div class="title">My system made $0.07 today.<br>On purpose.</div>
+    <div class="stats">
+      <div><div class="num" style="color:#6a9ef0">$0.07</div><div class="label">per day, 40U carry notional</div></div>
+      <div><div class="num" style="color:#7dd3c0">+61.5%</div><div class="label">trailing 7-settle APR</div></div>
+      <div><div class="num" style="color:#ffd166">5d</div><div class="label">to recover entry costs</div></div>
+    </div>
+    <div class="body">The ledger is the product. <b>Profit is a byproduct.</b></div>
+    <div class="source">github.com/Faier/flypnl · 2026-10-21 · not financial advice</div>
+  </div>
+</body>
+</html>
