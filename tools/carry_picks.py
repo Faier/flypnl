@@ -45,11 +45,43 @@ except Exception:      # pragma: no cover - 代理不可达时的优雅降级
 STATE = _HERE.parent / "state" / "carry_picks.json"
 
 
-def persistence_profile(runs_dir: str) -> dict:
+def _gate_history_seed(rows: list) -> dict:
+    """改动3（2026-10-24 选币审计）：持续性档案冷启动播种。
+
+    Gate 官方 funding_rate 接口返回逐结算历史（[{'r': '0.0001', 't': ...}]，
+    100 条 ≈ 33 天 @8h）。对过了瞬时门（≥15% 年化）的 gate 候选预拉,
+    直接成为持续性档案——否则档案要雷达跑 2-3 天才可用,而费率事件窗口
+    常常就几天。只拉 gate（执行主所）+ 过门的,控制请求量。
+    注：gate_watch 10-21 时验证过 funding_records 400,这个 funding_rate
+    端点是后来上线的（或当时未发现），此处为准。"""
+    import ssl
+    import urllib.request
+    seeded = {}
+    for r in rows:
+        if r["exchange"] != "gate" or r["funding_ann"] < APR_MIN_LAST:
+            continue
+        url = (f"https://api.gateio.ws/api/v4/futures/usdt/funding_rate"
+               f"?contract={r['contract']}&limit=100")
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "flypnl/0.1"})
+            with urllib.request.urlopen(req, timeout=15,
+                                        context=ssl.create_default_context()) as resp:
+                recs = json.loads(resp.read())
+            if recs:
+                anns = [float(x.get("r") or 0)
+                        * (24 / (r.get("interval_h") or 8.0)) * 365 for x in recs]
+                seeded[f"gate:{r['contract']}"] = anns
+        except Exception:
+            continue
+    return seeded
+
+
+def persistence_profile(runs_dir: str, rows: list | None = None) -> dict:
     """与 carry_paper 同款：funding.jsonl 尾部 4 万行 → 每合约 {n,mean,min}。
     common.RUNS 即 engine/runs/radar，与雷达/纸面机同一份档案。
-    funding.jsonl 缺档时并入 gate_watch 的 4h 桶历史（自建结算序列，
-    桶费率年化 = rate × 6 × 365）——PONS 在这里攒了 60+ 桶。"""
+    funding.jsonl 缺档时并入两个冷启动源：① gate_watch 的 4h 桶历史
+    （PONS 攒了 60+ 桶）② Gate 官方 funding_history 预拉（改动3）。
+    官方历史优先级低于本地观测（jsonl 每次运行都在积累,会自然覆盖）。"""
     pers = {}
     for r in read_jsonl_tail("funding.jsonl", 40000):
         if "contract" not in r:
@@ -65,6 +97,10 @@ def persistence_profile(runs_dir: str) -> dict:
                 pers.setdefault("gate:PONS_USDT", []).extend(vals)
         except Exception:
             pass
+    if rows:
+        for k, anns in _gate_history_seed(rows).items():
+            if len(pers.get(k, [])) < 4:          # 本地档案已足则不覆盖
+                pers.setdefault(k, []).extend(anns)
     return {k: {"n": len(v), "mean": sum(v) / len(v), "min": min(v)}
             for k, v in pers.items() if len(v) >= 4}
 
@@ -81,7 +117,7 @@ def main() -> None:
             venue_errors[name] = str(e)[:80]
 
     runs_dir = str(_HERE.parent / "engine" / "runs" / "radar")
-    pers = persistence_profile(runs_dir)
+    pers = persistence_profile(runs_dir, rows=rows)
     spot_universes = {}
     for venue in VENUES:
         if any(r["exchange"] == venue for r in rows):
@@ -93,7 +129,7 @@ def main() -> None:
                 spot_universes[venue] = su
 
     # ---- 三张榜 -------------------------------------------------------
-    ready, near, thin = [], [], []
+    ready, near, thin, nospot = [], [], [], []
     seen_base = set()
     ranked = []
     for r in rows:
@@ -145,6 +181,14 @@ def main() -> None:
             continue
         if not (APR_MIN_LAST <= r["funding_ann"] <= APR_TRAP):
             continue
+        # 改动1（2026-10-24 选币审计）：永续量够但没有同所现货腿的
+        # （Gate/Bybit 的代币化股票永续全是这类）——显式列出来而不是静默
+        # 消失：行情表给你看 +2600%，但 carry 的定义就是同所两腿，做不了
+        spot_sym = VENUES[r["exchange"]]["spot_sym"](r["base"])
+        if spot_sym not in spot_universes.get(r["exchange"], set()):
+            if len(nospot) < 8:
+                nospot.append({**_rec(r, p), "why": "永续有量,该所无现货腿(多为代币化股票)"})
+            continue
         gaps = []
         if p.get("mean", 0.0) < APR_MIN_MEAN:
             gaps.append(f"均值 {p.get('mean', 0):.0%}<{APR_MIN_MEAN:.0%}")
@@ -156,7 +200,7 @@ def main() -> None:
             near.append({**_rec(r, p), "why": "；".join(gaps)})
 
     out = {"ts": int(time.time()), "ready": ready, "near": near,
-           "thin": thin[:5], "venue_errors": venue_errors}
+           "thin": thin[:5], "no_spot": nospot, "venue_errors": venue_errors}
     STATE.parent.mkdir(parents=True, exist_ok=True)
     STATE.write_text(json.dumps(out, ensure_ascii=False, indent=1))
 
@@ -179,6 +223,10 @@ def main() -> None:
     if thin:
         print(f"\n⛔ 费率肥但深度不足（防手痒清单）")
         for x in thin:
+            print(f"  {x['venue']:>7} {x['base']:<8} 瞬时{x['apr_now']:+.0%} → {x['why']}")
+    if nospot:
+        print(f"\n🚫 永续肥但无现货腿（行情表的诱饵,carry 做不了）")
+        for x in nospot:
             print(f"  {x['venue']:>7} {x['base']:<8} 瞬时{x['apr_now']:+.0%} → {x['why']}")
     print(f"\n状态: {STATE}")
 
